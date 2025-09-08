@@ -1,0 +1,41 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Android / Gradle
+/.idea
+/build
+*.apk
+*.ap_
+*.dex
+*.class
+
+# Keystore (서명 파일)
+*.jks
+*.keystore
+
+# 로그 / 캐시
+*.log
+
+# NDK / CMake 빌드
+obj/
+*.so
+
+# Gradle Wrapper
+gradle-wrapper.jar
+
+# 환경파일
+.env
+
