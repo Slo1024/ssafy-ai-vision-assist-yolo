@@ -1,0 +1,35 @@
+# IDE/Gradle
+*.iml
+.gradle/
+local.properties
+/.idea/
+
+# Build outputs
+/build/
+app/build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# OS
+.DS_Store
+
+# Binaries
+*.apk
+*.ap_
+*.dex
+*.class
+
+# Keystore
+*.jks
+*.keystore
+
+# Logs
+*.log
+
+# NDK
+obj/
+*.so
+
+# Env
+.env
