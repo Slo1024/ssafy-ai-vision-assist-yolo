@@ -9,21 +9,23 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                echo 'Checking out code from GitLab...'
-                git branch: env.BRANCH_NAME, 
-                    url: env.GITLAB_REPO_URL,
-                    credentialsId: 'gitlab-credentials'
+                echo 'Code already checked out by Jenkins SCM'
+                script {
+                    // Get current branch name
+                    env.CURRENT_BRANCH = env.GIT_BRANCH?.replaceFirst(/^origin\//, '') ?: 'master'
+                    echo "Building branch: ${env.CURRENT_BRANCH}"
+                }
             }
         }
         
         stage('Environment Detection') {
             steps {
                 script {
-                    if (env.BRANCH_NAME == 'master') {
+                    if (env.CURRENT_BRANCH == 'master') {
                         env.DEPLOY_ENV = 'prod'
                         env.DOCKER_COMPOSE_FILE = 'docker-compose.prod.yml'
                         env.API_PORT = '8081'
-                    } else if (env.BRANCH_NAME == 'dev') {
+                    } else if (env.CURRENT_BRANCH == 'dev') {
                         env.DEPLOY_ENV = 'dev' 
                         env.DOCKER_COMPOSE_FILE = 'docker-compose.dev.yml'
                         env.API_PORT = '8082'
