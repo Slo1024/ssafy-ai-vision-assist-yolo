@@ -1,6 +1,7 @@
 # ===== 환경설정 파일 =====
 # 실제 API 키가 포함된 환경설정 파일들 (템플릿 파일만 커밋)
 .env
+.env.*
 .env.local
 .env.*.local
 
@@ -43,6 +44,7 @@ BE/**/ehthumbs.db
 BE/**/Thumbs.db
 
 # Spring Boot specific
+BE/**/application.properties
 BE/**/application-local.yml
 BE/**/application-local.properties
 BE/**/application-secret.yml
