@@ -103,4 +103,10 @@ dependencies {
     kapt(libs.hilt.compiler)                         // -> kapt(libs.hilt.compiler) ('hilt-compiler')
 
 
+    // 백엔드 연동
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+
+
 }
