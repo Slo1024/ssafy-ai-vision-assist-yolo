@@ -2,99 +2,70 @@ spring:
   application:
     name: lookey
   profiles:
-    active: ${APP_ENVIRONMENT:development}
+    active: ${SPRING_PROFILES_ACTIVE:dev}
     
   # Database Configuration
   datasource:
-    url: ${DATABASE_URL:jdbc:mysql://localhost:3306/lookey_dev?useSSL=false&serverTimezone=Asia/Seoul}
-    username: ${DATABASE_USERNAME:dev_user}
-    password: ${DATABASE_PASSWORD:password}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://mysql-shared:3306/lookey?useSSL=false&serverTimezone=Asia/Seoul}
+    username: ${SPRING_DATASOURCE_USERNAME:lookey}
+    password: ${SPRING_DATASOURCE_PASSWORD:lookeypass}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
     
   # JPA Configuration
   jpa:
     hibernate:
-      ddl-auto: ${JPA_DDL_AUTO:update}
-    show-sql: ${DEBUG_ENABLED:true}
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.MySQL8Dialect
-        format_sql: true
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:create-drop}
+    show-sql: ${SPRING_JPA_SHOW_SQL:true}
+    database-platform: ${SPRING_JPA_DATABASE_PLATFORM:org.hibernate.dialect.MySQLDialect}
 
   # Redis Configuration
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
+      host: ${SPRING_DATA_REDIS_HOST:redis-shared}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
 
 # Server Configuration
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 # Logging Configuration
 logging:
   level:
-    com.example.lookey: ${LOG_LEVEL:DEBUG}
-    org.springframework.web: ${LOG_LEVEL:DEBUG}
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
-
-# External API Configuration
-external:
-  api:
-    food-safety:
-      url: ${FOOD_SAFETY_API_URL:https://apis.data.go.kr/1471000/FoodNtrIrdntInfoService1}
-      key: ${FOOD_SAFETY_API_KEY:}
-    rda:
-      url: ${RDA_API_URL:https://apis.data.go.kr/1390000/AgriProductInfoService}
-      key: ${RDA_API_KEY:}
-    google-maps:
-      url: ${GOOGLE_MAPS_API_URL:https://maps.googleapis.com/maps/api}
-      key: ${GOOGLE_MAPS_API_KEY:}
-    naver-map:
-      url: ${NAVER_MAP_API_URL:https://naveropenapi.apigw.ntruss.com}
-      client-id: ${NAVER_MAP_CLIENT_ID:}
-      client-secret: ${NAVER_MAP_CLIENT_SECRET:}
-
-# JWT Configuration
-jwt:
-  secret: ${JWT_SECRET:default-dev-secret-key}
-  expiration: ${JWT_EXPIRATION:86400000}
-
-# File Upload Configuration
-file:
-  upload:
-    path: ${FILE_UPLOAD_PATH:/tmp/uploads}
-  max-size: ${MAX_FILE_SIZE:10MB}
+    com.project.lookey: ${LOGGING_LEVEL_COM_PROJECT_LOOKEY:DEBUG}
+    root: ${LOGGING_LEVEL_ROOT:INFO}
 
 # Application Configuration
 app:
-  environment: ${APP_ENVIRONMENT:development}
-  debug: ${DEBUG_ENABLED:true}
+  environment: ${APP_ENVIRONMENT:dev}
+  debug: ${APP_DEBUG:true}
 
 ---
 # Development Profile
 spring:
   config:
     activate:
-      on-profile: development
+      on-profile: dev
   jpa:
     hibernate:
       ddl-auto: create-drop
     show-sql: true
+
+logging:
+  level:
+    com.project.lookey: DEBUG
 
 ---
 # Production Profile  
 spring:
   config:
     activate:
-      on-profile: production
+      on-profile: prod
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: false
+
 logging:
   level:
-    com.example.lookey: ERROR
-    org.springframework.web: ERROR
+    com.project.lookey: INFO
+    root: WARN
