@@ -8,11 +8,11 @@ public class IndexController {
 
     @GetMapping("/")
     public String index() {
-        return "redirect:/swagger-ui/index.html";
+        return "redirect:/swagger-ui/index.html?url=/v3/api-docs";
     }
     
     @GetMapping("/docs")
     public String docs() {
-        return "redirect:/swagger-ui/index.html";
+        return "redirect:/swagger-ui/index.html?url=/v3/api-docs";
     }
 }
