@@ -1,0 +1,100 @@
+spring:
+  application:
+    name: lookey
+  profiles:
+    active: ${APP_ENVIRONMENT:development}
+    
+  # Database Configuration
+  datasource:
+    url: ${DATABASE_URL:jdbc:mysql://localhost:3306/lookey_dev?useSSL=false&serverTimezone=Asia/Seoul}
+    username: ${DATABASE_USERNAME:dev_user}
+    password: ${DATABASE_PASSWORD:password}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: ${DEBUG_ENABLED:true}
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+
+  # Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
+# Server Configuration
+server:
+  port: 8080
+
+# Logging Configuration
+logging:
+  level:
+    com.example.lookey: ${LOG_LEVEL:DEBUG}
+    org.springframework.web: ${LOG_LEVEL:DEBUG}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# External API Configuration
+external:
+  api:
+    food-safety:
+      url: ${FOOD_SAFETY_API_URL:https://apis.data.go.kr/1471000/FoodNtrIrdntInfoService1}
+      key: ${FOOD_SAFETY_API_KEY:}
+    rda:
+      url: ${RDA_API_URL:https://apis.data.go.kr/1390000/AgriProductInfoService}
+      key: ${RDA_API_KEY:}
+    google-maps:
+      url: ${GOOGLE_MAPS_API_URL:https://maps.googleapis.com/maps/api}
+      key: ${GOOGLE_MAPS_API_KEY:}
+    naver-map:
+      url: ${NAVER_MAP_API_URL:https://naveropenapi.apigw.ntruss.com}
+      client-id: ${NAVER_MAP_CLIENT_ID:}
+      client-secret: ${NAVER_MAP_CLIENT_SECRET:}
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:default-dev-secret-key}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+# File Upload Configuration
+file:
+  upload:
+    path: ${FILE_UPLOAD_PATH:/tmp/uploads}
+  max-size: ${MAX_FILE_SIZE:10MB}
+
+# Application Configuration
+app:
+  environment: ${APP_ENVIRONMENT:development}
+  debug: ${DEBUG_ENABLED:true}
+
+---
+# Development Profile
+spring:
+  config:
+    activate:
+      on-profile: development
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+
+---
+# Production Profile  
+spring:
+  config:
+    activate:
+      on-profile: production
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+logging:
+  level:
+    com.example.lookey: ERROR
+    org.springframework.web: ERROR
