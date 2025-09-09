@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Lookey API Documentation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            margin: 10px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 18px;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .api-info {
+            background-color: #f4f4f4;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🍎 Lookey API 문서</h1>
+    <p>음식 알레르기 정보 제공 서비스</p>
+    
+    <div class="api-info">
+        <h3>📚 API 문서 보기</h3>
+        <p>아래 버튼을 클릭하면 Swagger UI로 이동합니다</p>
+        <a href="/swagger-ui/index.html?url=https://j13e101.p.ssafy.io/dev/v3/api-docs" class="btn">
+            📖 Swagger UI 열기
+        </a>
+    </div>
+    
+    <div class="api-info">
+        <h3>🔗 직접 링크</h3>
+        <p><strong>OpenAPI JSON:</strong> <a href="/v3/api-docs">/v3/api-docs</a></p>
+        <p><strong>Health Check:</strong> <a href="/api/test/health">/api/test/health</a></p>
+    </div>
+    
+    <script>
+        // 3초 후 자동으로 Swagger UI로 리다이렉트
+        setTimeout(function() {
+            window.location.href = '/swagger-ui/index.html?url=https://j13e101.p.ssafy.io/dev/v3/api-docs';
+        }, 3000);
+    </script>
+    
+    <p><small>3초 후 자동으로 Swagger UI로 이동합니다...</small></p>
+</body>
+</html>
