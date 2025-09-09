@@ -3,7 +3,7 @@ pipeline {
     
     environment {
         PROJECT_DIR = '/opt/project'
-        GITLAB_REPO_URL = 'https://lab.ssafy.com/s13-final/S13P31E101.git'
+        GITLAB_REPO_URL = 'https://lab.ssafy.com/s13-ai-image-sub1/S13P21E101.git'
     }
     
     stages {
