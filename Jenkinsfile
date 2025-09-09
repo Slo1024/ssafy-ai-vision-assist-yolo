@@ -12,17 +12,13 @@ pipeline {
                 script {
                     echo 'Checking out code from GitLab...'
                     
-                    // Detect current branch
-                    def gitBranch = scm.branches[0].name
-                    if (gitBranch.startsWith('*/')) {
-                        gitBranch = gitBranch.substring(2)
-                    }
+                    // Checkout the code first
+                    checkout scm
                     
+                    // Detect current branch after checkout
+                    def gitBranch = sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
                     echo "Detected branch: ${gitBranch}"
                     env.CURRENT_BRANCH = gitBranch
-                    
-                    // Checkout the detected branch
-                    checkout scm
                 }
             }
         }
@@ -32,7 +28,7 @@ pipeline {
                 script {
                     echo 'Copying source code to project directory...'
                     sh """
-                        # Remove old backend files
+                        # Remove old backend files (use sudo since we have permission now)
                         sudo rm -rf ${PROJECT_DIR}/backend/*
                         
                         # Copy BE directory contents to backend
@@ -42,6 +38,7 @@ pipeline {
                             sudo chown -R jenkins:jenkins ${PROJECT_DIR}/backend
                         else
                             echo "BE/lookey directory not found"
+                            ls -la .
                             exit 1
                         fi
                         
