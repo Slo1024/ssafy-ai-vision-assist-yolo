@@ -1,0 +1,55 @@
+networks:
+  prod-network:
+    driver: bridge
+
+services:
+  mysql-prod:
+    image: mysql:8.0
+    container_name: mysql-prod
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: lookey_prod
+      MYSQL_USER: lookey
+      MYSQL_PASSWORD: lookeypass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-prod-data:/var/lib/mysql
+    networks:
+      - prod-network
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  redis-prod:
+    image: redis:7-alpine
+    container_name: redis-prod
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-prod-data:/data
+    networks:
+      - prod-network
+    restart: unless-stopped
+
+  springapp-prod:
+    build: .
+    container_name: springapp-prod
+    ports:
+      - "8081:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-prod:3306/lookey_prod
+      - SPRING_DATASOURCE_USERNAME=lookey
+      - SPRING_DATASOURCE_PASSWORD=lookeypass
+      - SPRING_DATA_REDIS_HOST=redis-prod
+      - SPRING_DATA_REDIS_PORT=6379
+    depends_on:
+      - mysql-prod
+      - redis-prod
+    networks:
+      - prod-network
+    restart: unless-stopped
+
+volumes:
+  mysql-prod-data:
+  redis-prod-data:
