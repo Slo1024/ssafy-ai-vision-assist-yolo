@@ -3,30 +3,30 @@ networks:
     driver: bridge
 
 services:
-  mysql-prod:
+  mysql-shared:
     image: mysql:8.0
-    container_name: mysql-prod
+    container_name: mysql-shared
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: lookey_prod
+      MYSQL_DATABASE: lookey
       MYSQL_USER: lookey
       MYSQL_PASSWORD: lookeypass
     ports:
       - "3306:3306"
     volumes:
-      - mysql-prod-data:/var/lib/mysql
+      - mysql-shared-data:/var/lib/mysql
     networks:
       - prod-network
     restart: unless-stopped
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
 
-  redis-prod:
+  redis-shared:
     image: redis:7-alpine
-    container_name: redis-prod
+    container_name: redis-shared
     ports:
       - "6379:6379"
     volumes:
-      - redis-prod-data:/data
+      - redis-shared-data:/data
     networks:
       - prod-network
     restart: unless-stopped
@@ -38,18 +38,18 @@ services:
       - "8081:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-prod:3306/lookey_prod
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-shared:3306/lookey
       - SPRING_DATASOURCE_USERNAME=lookey
       - SPRING_DATASOURCE_PASSWORD=lookeypass
-      - SPRING_DATA_REDIS_HOST=redis-prod
+      - SPRING_DATA_REDIS_HOST=redis-shared
       - SPRING_DATA_REDIS_PORT=6379
     depends_on:
-      - mysql-prod
-      - redis-prod
+      - mysql-shared
+      - redis-shared
     networks:
       - prod-network
     restart: unless-stopped
 
 volumes:
-  mysql-prod-data:
-  redis-prod-data:
+  mysql-shared-data:
+  redis-shared-data:
