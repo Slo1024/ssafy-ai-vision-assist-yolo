@@ -9,6 +9,8 @@ import io.swagger.v3.oas.models.tags.Tag;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springdoc.core.models.GroupedOpenApi;
+import org.springdoc.core.customizers.OpenApiCustomizer;
 
 import java.util.List;
 
@@ -38,6 +40,14 @@ public class SwaggerConfig {
                         new Tag().name("Cart").description("장바구니 관련 API")
                 ))
                 .components(new Components());
+    }
+
+    @Bean
+    public GroupedOpenApi publicApi() {
+        return GroupedOpenApi.builder()
+                .group("lookey-api")
+                .pathsToMatch("/api/**")
+                .build();
     }
 
     private List<Server> getServers() {

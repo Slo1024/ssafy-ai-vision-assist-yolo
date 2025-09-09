@@ -81,4 +81,6 @@ springdoc:
     tags-sorter: alpha
     config-url: /v3/api-docs/swagger-config
     url: /v3/api-docs
+    csrf:
+      enabled: false
   show-actuator: true
