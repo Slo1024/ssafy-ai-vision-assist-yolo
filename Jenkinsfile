@@ -55,7 +55,7 @@ pipeline {
                         echo "Files in backend directory:"
                         ls -la ${PROJECT_DIR}/backend/
                         echo "Docker files in project directory:"
-                        ls -la ${PROJECT_DIR}/ | grep -E "(Dockerfile|docker-compose|\.env)"
+                        ls -la ${PROJECT_DIR}/ | grep -E "(Dockerfile|docker-compose|\\\\.env)"
                     """
                 }
             }
