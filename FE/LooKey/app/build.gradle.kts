@@ -7,6 +7,24 @@ plugins {
     id("org.jetbrains.kotlin.kapt")    // ← 버전 없이 'id'로 적용 (중요)
 }
 
+// .env 파일 읽기 함수
+fun loadEnvFile(fileName: String): Map<String, String> {
+    val envFile = file("../$fileName")
+    val envMap = mutableMapOf<String, String>()
+    
+    if (envFile.exists()) {
+        envFile.readLines().forEach { line ->
+            if (line.isNotBlank() && !line.startsWith("#")) {
+                val parts = line.split("=", limit = 2)
+                if (parts.size == 2) {
+                    envMap[parts[0].trim()] = parts[1].trim()
+                }
+            }
+        }
+    }
+    return envMap
+}
+
 android {
     namespace = "com.example.lookey"
     compileSdk = 35
@@ -24,10 +42,27 @@ android {
         debug {
             buildConfigField("boolean", "USE_AUTH", "true")          // 로그인부터 시작
             buildConfigField("boolean", "SHOW_LOGIN_SKIP", "true")   // 건너뛰기 버튼 표시
+            
+            // 개발 환경 .env 파일 읽기
+            val devEnv = loadEnvFile(".env.development")
+            buildConfigField("String", "API_BASE_URL", "\"${devEnv["API_BASE_URL"] ?: "https://j13e101.p.ssafy.io/dev-api"}\"")
+            buildConfigField("String", "ENVIRONMENT", "\"${devEnv["ENVIRONMENT"] ?: "development"}\"")
+            buildConfigField("boolean", "DEBUG_ENABLED", "${devEnv["DEBUG_ENABLED"] ?: "true"}")
+            buildConfigField("String", "LOG_LEVEL", "\"${devEnv["LOG_LEVEL"] ?: "DEBUG"}\"")
+            
+            applicationIdSuffix = ".debug"
         }
         release {
             buildConfigField("boolean", "USE_AUTH", "true")          // 로그인부터 시작
             buildConfigField("boolean", "SHOW_LOGIN_SKIP", "false")  // 배포용: 건너뛰기 숨김
+            
+            // 프로덕션 환경 .env 파일 읽기
+            val prodEnv = loadEnvFile(".env.production")
+            buildConfigField("String", "API_BASE_URL", "\"${prodEnv["API_BASE_URL"] ?: "https://j13e101.p.ssafy.io/api"}\"")
+            buildConfigField("String", "ENVIRONMENT", "\"${prodEnv["ENVIRONMENT"] ?: "production"}\"")
+            buildConfigField("boolean", "DEBUG_ENABLED", "${prodEnv["DEBUG_ENABLED"] ?: "false"}")
+            buildConfigField("String", "LOG_LEVEL", "\"${prodEnv["LOG_LEVEL"] ?: "ERROR"}\"")
+            
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -97,6 +132,7 @@ dependencies {
     implementation(libs.retrofit)                    // 그대로
     implementation(libs.okhttp.logging)              // -> implementation(libs.okhttp.logging) (자동완성에서 'okhttp-logging')
     implementation(libs.kotlinx.serialization.json)  // -> implementation(libs.kotlinx.serialization.json) ('kotlinx-serialization-json')
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0") // Gson converter for Retrofit
 
 // Hilt
     implementation(libs.hilt.android)                // -> implementation(libs.hilt.android) ('hilt-android')
