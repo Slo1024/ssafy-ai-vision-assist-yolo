@@ -9,10 +9,21 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                echo 'Checking out code from GitLab...'
-                git branch: env.BRANCH_NAME, 
-                    url: env.GITLAB_REPO_URL,
-                    credentialsId: 'gitlab-credentials'
+                script {
+                    echo 'Checking out code from GitLab...'
+                    
+                    // Detect current branch
+                    def gitBranch = scm.branches[0].name
+                    if (gitBranch.startsWith('*/')) {
+                        gitBranch = gitBranch.substring(2)
+                    }
+                    
+                    echo "Detected branch: ${gitBranch}"
+                    env.CURRENT_BRANCH = gitBranch
+                    
+                    // Checkout the detected branch
+                    checkout scm
+                }
             }
         }
         
@@ -45,12 +56,18 @@ pipeline {
         stage('Environment Detection') {
             steps {
                 script {
-                    if (env.BRANCH_NAME == 'master') {
+                    echo "Current branch: ${env.CURRENT_BRANCH}"
+                    
+                    if (env.CURRENT_BRANCH == 'master') {
                         env.DEPLOY_ENV = 'prod'
                         env.DOCKER_COMPOSE_FILE = 'docker-compose.prod.yml'
                         env.API_PORT = '8081'
-                    } else if (env.BRANCH_NAME == 'dev') {
+                    } else if (env.CURRENT_BRANCH == 'dev') {
                         env.DEPLOY_ENV = 'dev' 
+                        env.DOCKER_COMPOSE_FILE = 'docker-compose.dev.yml'
+                        env.API_PORT = '8082'
+                    } else {
+                        env.DEPLOY_ENV = 'dev'  // Default to dev for other branches
                         env.DOCKER_COMPOSE_FILE = 'docker-compose.dev.yml'
                         env.API_PORT = '8082'
                     }
