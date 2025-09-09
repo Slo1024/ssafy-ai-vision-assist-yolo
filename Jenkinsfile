@@ -87,7 +87,7 @@ pipeline {
                             ./gradlew clean build -x test
                             
                             # Verify JAR file was created
-                            if [ -f "build/libs/*.jar" ]; then
+                            if ls build/libs/*.jar 1> /dev/null 2>&1; then
                                 echo "JAR file created successfully:"
                                 ls -la build/libs/
                             else
