@@ -1,0 +1,55 @@
+networks:
+  dev-network:
+    driver: bridge
+
+services:
+  mysql-shared:
+    image: mysql:8.0
+    container_name: mysql-shared
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: lookey
+      MYSQL_USER: lookey
+      MYSQL_PASSWORD: lookeypass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-shared-data:/var/lib/mysql
+    networks:
+      - dev-network
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  redis-shared:
+    image: redis:7-alpine
+    container_name: redis-shared
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-shared-data:/data
+    networks:
+      - dev-network
+    restart: unless-stopped
+
+  springapp-dev:
+    build: .
+    container_name: springapp-dev
+    ports:
+      - "8082:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-shared:3306/lookey
+      - SPRING_DATASOURCE_USERNAME=lookey
+      - SPRING_DATASOURCE_PASSWORD=lookeypass
+      - SPRING_DATA_REDIS_HOST=redis-shared
+      - SPRING_DATA_REDIS_PORT=6379
+    depends_on:
+      - mysql-shared
+      - redis-shared
+    networks:
+      - dev-network
+    restart: unless-stopped
+
+volumes:
+  mysql-shared-data:
+  redis-shared-data:

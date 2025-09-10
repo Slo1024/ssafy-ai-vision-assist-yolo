@@ -1,0 +1,86 @@
+spring:
+  application:
+    name: lookey
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+    
+  # Database Configuration
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://mysql-shared:3306/lookey?useSSL=false&serverTimezone=Asia/Seoul}
+    username: ${SPRING_DATASOURCE_USERNAME:lookey}
+    password: ${SPRING_DATASOURCE_PASSWORD:lookeypass}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
+    
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:create-drop}
+    show-sql: ${SPRING_JPA_SHOW_SQL:true}
+    database-platform: ${SPRING_JPA_DATABASE_PLATFORM:org.hibernate.dialect.MySQLDialect}
+
+  # Redis Configuration
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:redis-shared}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:8080}
+
+# Logging Configuration
+logging:
+  level:
+    com.project.lookey: ${LOGGING_LEVEL_COM_PROJECT_LOOKEY:DEBUG}
+    root: ${LOGGING_LEVEL_ROOT:INFO}
+
+# Application Configuration
+app:
+  environment: ${APP_ENVIRONMENT:dev}
+  debug: ${APP_DEBUG:true}
+
+---
+# Development Profile
+spring:
+  config:
+    activate:
+      on-profile: dev
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+
+logging:
+  level:
+    com.project.lookey: DEBUG
+
+---
+# Production Profile  
+spring:
+  config:
+    activate:
+      on-profile: prod
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+logging:
+  level:
+    com.project.lookey: INFO
+    root: WARN
+
+# SpringDoc/Swagger Configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    try-it-out-enabled: true
+    operations-sorter: alpha
+    tags-sorter: alpha
+    config-url: /v3/api-docs/swagger-config
+    url: /v3/api-docs
+    csrf:
+      enabled: false
+  show-actuator: true

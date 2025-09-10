@@ -1,38 +1,34 @@
 package com.example.lookey.ui.auth
 
-import android.content.Intent
+import android.content.Context
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import com.example.lookey.BuildConfig
 import com.example.lookey.R
 import com.example.lookey.core.platform.tts.TtsController
+import com.example.lookey.data.network.RetrofitClient
+import com.example.lookey.data.local.TokenProvider
 import com.example.lookey.ui.components.GoogleSignInButton
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
-import com.example.lookey.BuildConfig
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
@@ -47,37 +43,43 @@ fun LoginScreen(
     val gso = remember {
         GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestEmail()
+            .requestIdToken("95484213731-5qj9f0guuquq6pprklb8mtvfr41re2i2.apps.googleusercontent.com")
             .build()
     }
     val googleClient = remember { GoogleSignIn.getClient(context, gso) }
 
+    val signInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            val idToken = account?.idToken
+            Log.d("GoogleLogin", "idToken: $idToken")
+
+            if (!idToken.isNullOrEmpty()) {
+                tts.speak("${account.displayName ?: "사용자"}님, 로그인되었습니다.")
+                sendIdTokenToServer(context, idToken, onSignedIn)
+            } else {
+                tts.speak("idToken을 가져오지 못했습니다.")
+            }
+        } catch (e: ApiException) {
+            tts.speak("로그인에 실패했습니다: ${e.statusCode}")
+            Log.e("GoogleLogin", "로그인 실패", e)
+        }
+    }
+
+    // 이미 로그인되어 있으면 자동 진행
     LaunchedEffect(Unit) {
-        val last = GoogleSignIn.getLastSignedInAccount(context)
-        if (last != null) {
+        GoogleSignIn.getLastSignedInAccount(context)?.let {
             tts.speak("이미 로그인되어 있습니다.")
             onSignedIn()
-        } else {
+        } ?: run {
             tts.speak("로그인 화면입니다. 구글로 시작하기 버튼을 누르세요.")
         }
     }
 
-    val signInLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data as Intent?)
-        try {
-            val account = task.getResult(ApiException::class.java)
-            if (account != null) {
-                tts.speak("${account.displayName ?: "사용자"}님, 로그인되었습니다.")
-                onSignedIn()
-            } else {
-                tts.speak("로그인에 실패했습니다.")
-            }
-        } catch (_: ApiException) {
-            tts.speak("로그인에 실패했습니다.")
-        }
-    }
-
+    // UI
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -86,10 +88,9 @@ fun LoginScreen(
         Column(
             modifier = Modifier
                 .align(Alignment.Center)
-                .padding(bottom = 48.dp), // 버튼과 간격
+                .padding(bottom = 48.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 상단 설명 문구
             Text(
                 text = "저시력자를 위한\n편의점 쇼핑 도우미",
                 style = MaterialTheme.typography.titleLarge,
@@ -97,7 +98,6 @@ fun LoginScreen(
             )
             Spacer(Modifier.height(16.dp))
 
-            // 로고 (VectorDrawable)
             Image(
                 painter = painterResource(logoResId),
                 contentDescription = "LooKey 로고",
@@ -105,18 +105,21 @@ fun LoginScreen(
             )
 
             Spacer(Modifier.height(12.dp))
-            // 앱명
+
             Text(
                 text = "LooKey",
                 style = MaterialTheme.typography.headlineMedium,
-                color = Color(0xFF1877F2), // 피그마 파랑
+                color = Color(0xFF1877F2),
                 fontWeight = FontWeight.Bold
             )
         }
 
         if (showSkip) {
             TextButton(
-                onClick = { tts.speak("로그인을 건너뛰고 홈으로 이동합니다."); onSignedIn() },
+                onClick = {
+                    tts.speak("로그인을 건너뛰고 홈으로 이동합니다.")
+                    onSignedIn()
+                },
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 76.dp)
             ) { Text("건너뛰기") }
         }
@@ -132,3 +135,29 @@ fun LoginScreen(
     }
 }
 
+private fun sendIdTokenToServer(
+    context: Context,
+    idToken: String,
+    onSignedIn: () -> Unit
+) {
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val response = RetrofitClient.apiService.googleLogin("Bearer $idToken")
+            if (response.isSuccessful) {
+                val jwt = response.body()?.result?.jwtToken
+                if (!jwt.isNullOrEmpty()) {
+                    TokenProvider.token = jwt // 저장
+                    CoroutineScope(Dispatchers.Main).launch {
+                        onSignedIn()
+                    }
+                } else {
+                    Log.e("LoginScreen", "JWT가 비어있습니다.")
+                }
+            } else {
+                Log.e("LoginScreen", "서버 로그인 실패: ${response.code()} ${response.message()}")
+            }
+        } catch (e: Exception) {
+            Log.e("LoginScreen", "서버 로그인 중 예외 발생", e)
+        }
+    }
+}

@@ -9,8 +9,6 @@ import com.example.lookey.BuildConfig
 import com.example.lookey.ui.auth.LoginScreen
 import com.example.lookey.ui.home.HomeScreen
 
-
-
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
