@@ -42,20 +42,20 @@ pipeline {
                             exit 1
                         fi
                         
-                        # Copy Docker files and environment files
+                        # Copy Docker files (using existing .env on server)
                         echo "Copying Docker configuration files..."
                         sudo cp Dockerfile ${PROJECT_DIR}/
                         sudo cp docker-compose.*.yml ${PROJECT_DIR}/
-                        sudo cp .env.* ${PROJECT_DIR}/
                         sudo chown jenkins:jenkins ${PROJECT_DIR}/Dockerfile
                         sudo chown jenkins:jenkins ${PROJECT_DIR}/docker-compose.*.yml
-                        sudo chown jenkins:jenkins ${PROJECT_DIR}/.env.*
                         
                         # List copied files for verification
                         echo "Files in backend directory:"
                         ls -la ${PROJECT_DIR}/backend/
                         echo "Docker files in project directory:"
-                        ls -la ${PROJECT_DIR}/ | grep -E "(Dockerfile|docker-compose|\\\\.env)"
+                        ls -la ${PROJECT_DIR}/ | grep -E "(Dockerfile|docker-compose)"
+                        echo "Using existing .env file on server:"
+                        ls -la ${PROJECT_DIR}/.env
                     """
                 }
             }
