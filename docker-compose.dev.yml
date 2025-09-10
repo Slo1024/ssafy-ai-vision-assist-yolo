@@ -47,6 +47,11 @@ services:
       - SPRING_JPA_SHOW_SQL=${SPRING_JPA_SHOW_SQL_DEV}
       - LOGGING_LEVEL_COM_PROJECT_LOOKEY=${LOGGING_LEVEL_COM_PROJECT_LOOKEY_DEV}
       - LOGGING_LEVEL_ROOT=${LOGGING_LEVEL_ROOT_DEV}
+      - GOOGLE_OAUTH_ID=${GOOGLE_OAUTH_ID}
+      - GOOGLE_OAUTH_SECRET=${GOOGLE_OAUTH_SECRET}
+      - JWT_SECRET=${JWT_SECRET}
+      - GOOGLE_REDIRECT_URI=http://j13e101.p.ssafy.io:8082/login/oauth2/code/google
+      - GOOGLE_CALLBACK_URL=http://j13e101.p.ssafy.io:8082/auth/google/callback
     depends_on:
       - mysql-shared
       - redis-shared
