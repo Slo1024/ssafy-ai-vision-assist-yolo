@@ -45,9 +45,9 @@ val AppTypography: Typography = Base.withFont(KoddiUDOnGothic).copy(
     // Regular 14
     bodyMedium   = Base.bodyMedium.copy(fontSize = 14.sp, fontWeight = FontWeight.Normal),
 
-    // Small 12
+    // Small 12 / Large 24
     labelSmall   = Base.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.Medium),
-
+    labelLarge = Base.labelLarge.copy(fontSize = 32.sp, fontWeight = FontWeight.Bold),
     // Hero 54
     displayLarge   = TextStyle(fontFamily = KoddiUDOnGothic, fontWeight = FontWeight.Bold,      fontSize = 54.sp),
     headlineLarge  = TextStyle(fontFamily = KoddiUDOnGothic, fontWeight = FontWeight.ExtraBold, fontSize = 54.sp),
