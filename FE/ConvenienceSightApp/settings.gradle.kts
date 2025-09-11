@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "LooKey"
+rootProject.name = "ConvenienceSightApp"
 include(":app")
