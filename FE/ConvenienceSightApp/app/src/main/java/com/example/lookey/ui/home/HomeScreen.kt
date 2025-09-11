@@ -24,8 +24,9 @@ import com.example.lookey.R
 import com.example.lookey.core.platform.tts.TtsController
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
-
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun HomeScreen(
@@ -43,12 +44,12 @@ fun HomeScreen(
     }
 
     val tiles = listOf(
-        Action("편의점 찾기", R.drawable.ic_map, onFindStore),
-        Action("상품 찾기",   R.drawable.ic_scan, onFindProduct),
-        Action("장바구니",    R.drawable.ic_cart, onCart),
-        Action("알레르기 정보 입력", R.drawable.ic_pill, onAllergy),
-        Action("설정",        R.drawable.ic_settings, onSettings),
-        Action("사용법",      R.drawable.ic_help, onGuide),
+        Action("편의점\n찾기", R.drawable.ic_map, onFindStore),
+        Action("상품 찾기", R.drawable.ic_scan, onFindProduct),
+        Action("장바구니", R.drawable.ic_cart, onCart),
+        Action("알레르기\n정보 입력", R.drawable.ic_pill, onAllergy),
+        Action("설정", R.drawable.ic_settings, onSettings),
+        Action("사용법", R.drawable.ic_help, onGuide),
     )
 
     LazyVerticalGrid(
@@ -74,12 +75,12 @@ fun HomeScreen(
                     Image(
                         painter = painterResource(R.drawable.lookey),
                         contentDescription = "LooKey 로고",
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(55.dp)
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = "LooKey",
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary   // #004AD1 (AppColors.Main)
                     )
@@ -90,18 +91,18 @@ fun HomeScreen(
         }
 
 
-
         // 인사 문구 (2칸 차지)
         item(span = { GridItemSpan(maxLineSpan) }) {
             Text(
                 text = "${userName ?: "사용자"}님,\n안녕하세요!",
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
+                lineHeight = 45.sp,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 4.dp)
+                    .padding(bottom = 20.dp)
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(10.dp))
         }
 
         // 타일 2열 그리드 (스크롤됨)
@@ -147,6 +148,8 @@ fun DropShadowDivider(
 }
 
 
+private val ICON_SLOT_HEIGHT = 120.dp
+
 @Composable
 private fun ActionTile(
     label: String,
@@ -163,25 +166,35 @@ private fun ActionTile(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .height(207.dp)     // ✅ 고정 높이 207dp
+            .height(250.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Image(
-                painter = painterResource(iconRes),
-                contentDescription = label,           // 접근성
-                modifier = Modifier.size(60.dp)
-            )
-            Spacer(Modifier.height(12.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(ICON_SLOT_HEIGHT),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(iconRes),
+                    contentDescription = label,           // 접근성
+                    modifier = Modifier.size(65.dp)
+                )
+            }
+            Spacer(Modifier.height(0.dp))
             Text(
                 text = label,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                modifier = Modifier.fillMaxWidth(),   // 줄 폭을 타일 폭으로
+                textAlign = TextAlign.Center,         // 각 줄 가운대로
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                lineHeight = 40.sp   // 행간
             )
         }
     }
