@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="20dp"
+    android:background="#FFFFFF">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🔐 OAuth 로그인 테스트"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:layout_marginBottom="30dp"/>
+
+    <TextView
+        android:id="@+id/tvApiUrl"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="API URL: 로딩중..."
+        android:textSize="14sp"
+        android:textColor="#666666"
+        android:textAlignment="center"
+        android:padding="10dp"
+        android:background="#F5F5F5"
+        android:layout_marginBottom="20dp"/>
+
+    <Button
+        android:id="@+id/btnGoogleLogin"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="🔵 Google 로그인"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:background="#4285F4"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="20dp"/>
+
+    <TextView
+        android:id="@+id/tvResult"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="결과가 여기 표시됩니다"
+        android:textAlignment="center"
+        android:textSize="16sp"
+        android:textColor="#333333"
+        android:padding="20dp"
+        android:background="#F0F0F0"
+        android:minHeight="100dp"
+        android:gravity="center"/>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="20dp">
+
+        <TextView
+            android:id="@+id/tvLogs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="로그가 여기 표시됩니다"
+            android:textSize="12sp"
+            android:textColor="#666666"
+            android:padding="10dp"
+            android:background="#FAFAFA"
+            android:fontFamily="monospace"/>
+
+    </ScrollView>
+
+</LinearLayout>
