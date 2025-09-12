@@ -1,6 +1,5 @@
 package com.example.lookey.ui.navigation
 
-import android.graphics.Camera
 
 object Routes {
     const val Login = "login"

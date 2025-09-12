@@ -26,8 +26,8 @@ fun AppNavGraph(
                 onFindProduct = { navController.navigate(Routes.Scan.Camera) }, // ← 여기!
                 onCart = { /* TODO: 장바구니 화면으로 이동 */ },
                 onAllergy = { /* TODO: 알레르기 화면으로 이동 */ },
-//                onSettings = { /* TODO */ },
-//                onGuide = { /* TODO: 사용법/가이드 화면 이동 */ },
+                onSettings = { /* TODO */ },
+                onGuide = { /* TODO: 사용법/가이드 화면 이동 */ },
             )
         }
         composable(Routes.Login) {
@@ -42,8 +42,12 @@ fun AppNavGraph(
         }
 
         composable(Routes.Scan.Camera) {
-            ScanCameraScreen(back = { navController.popBackStack() })
+            ScanCameraScreen(
+                back = { navController.popBackStack() },
+
+            )
         }
+
 
 
     }
