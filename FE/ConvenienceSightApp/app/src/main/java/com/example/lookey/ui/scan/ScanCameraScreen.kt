@@ -42,7 +42,7 @@ import kotlin.random.Random
 
 import com.example.lookey.ui.viewmodel.ScanViewModel
 import com.example.lookey.domain.entity.DetectResult
-//import com.example.lookey.ui.components.BannerMessage
+import com.example.lookey.ui.components.BannerMessage
 
 
 @Composable
