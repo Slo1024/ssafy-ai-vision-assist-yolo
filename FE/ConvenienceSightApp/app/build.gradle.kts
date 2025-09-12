@@ -2,9 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    // Hilt를 쓸 경우에만 ↓ 두 줄 유지
-    alias(libs.plugins.hilt.android)
-    id("org.jetbrains.kotlin.kapt")    // ← 버전 없이 'id'로 적용 (중요)
+//    alias(libs.plugins.hilt.android)
+//    id("org.jetbrains.kotlin.kapt")    // ← 버전 없이 'id'로 적용 (중요)
 }
 
 android {
@@ -53,6 +52,9 @@ android {
 }
 
 dependencies {
+
+
+
     // Compose BOM
     implementation(platform(libs.androidx.compose.bom))
 
@@ -71,6 +73,11 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
 
     implementation(libs.play.services.auth)
+
+
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+
 
     // 테스트
     testImplementation(libs.junit)
@@ -99,8 +106,8 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)  // -> implementation(libs.kotlinx.serialization.json) ('kotlinx-serialization-json')
 
 // Hilt
-    implementation(libs.hilt.android)                // -> implementation(libs.hilt.android) ('hilt-android')
-    kapt(libs.hilt.compiler)                         // -> kapt(libs.hilt.compiler) ('hilt-compiler')
+//    implementation(libs.hilt.android)                // -> implementation(libs.hilt.android) ('hilt-android')
+//    kapt(libs.hilt.compiler)                         // -> kapt(libs.hilt.compiler) ('hilt-compiler')
 
 
     // 백엔드 연동
