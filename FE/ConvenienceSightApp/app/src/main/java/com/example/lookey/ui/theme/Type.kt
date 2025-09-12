@@ -1,67 +1,54 @@
-package com.example.lookey.ui.components
+package com.example.lookey.ui.theme
 
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
-import com.example.lookey.ui.scan.ResultFormatter
+import androidx.compose.material3.Typography
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import com.example.lookey.R
 
-@Composable
-fun BannerMessage(
-    banner: ResultFormatter.Banner,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val (bg, fg) = bannerColorsForType(banner.type)
+val KoddiUDOnGothic = FontFamily(
+    Font(R.font.koddiudongothic_regular,   weight = FontWeight.Normal),
+    Font(R.font.koddiudongothic_bold,      weight = FontWeight.Bold),
+    Font(R.font.koddiudongothic_extrabold, weight = FontWeight.ExtraBold),
+)
 
-    Surface(
-        color = bg,
-        contentColor = fg,
-        shape = RoundedCornerShape(8.dp),
-        tonalElevation = 2.dp,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-            .semantics { contentDescription = banner.text }
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = banner.text,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f)
-            )
-            TextButton(onClick = onDismiss) {
-                Text(text = "닫기", style = MaterialTheme.typography.labelLarge)
-            }
-        }
-    }
-}
+// Typography 확장: 전 스타일에 폰트 패밀리 적용
+private fun Typography.withFont(font: FontFamily) = copy(
+    displayLarge   = displayLarge.copy(fontFamily = font),
+    displayMedium  = displayMedium.copy(fontFamily = font),
+    displaySmall   = displaySmall.copy(fontFamily = font),
+    headlineLarge  = headlineLarge.copy(fontFamily = font),
+    headlineMedium = headlineMedium.copy(fontFamily = font),
+    headlineSmall  = headlineSmall.copy(fontFamily = font),
+    titleLarge     = titleLarge.copy(fontFamily = font),
+    titleMedium    = titleMedium.copy(fontFamily = font),
+    titleSmall     = titleSmall.copy(fontFamily = font),
+    bodyLarge      = bodyLarge.copy(fontFamily = font),
+    bodyMedium     = bodyMedium.copy(fontFamily = font),
+    bodySmall      = bodySmall.copy(fontFamily = font),
+    labelLarge     = labelLarge.copy(fontFamily = font),
+    labelMedium    = labelMedium.copy(fontFamily = font),
+    labelSmall     = labelSmall.copy(fontFamily = font),
+)
 
-@Composable
-private fun bannerColorsForType(
-    type: ResultFormatter.Banner.Type
-): Pair<Color, Color> {
-    val cs = MaterialTheme.colorScheme
-    return when (type) {
-        ResultFormatter.Banner.Type.WARNING ->
-            cs.secondary.copy(alpha = 0.18f) to cs.onSecondary
-        ResultFormatter.Banner.Type.INFO ->
-            cs.primary.copy(alpha = 0.12f) to cs.primary
-        ResultFormatter.Banner.Type.SUCCESS ->
-            cs.surfaceVariant.copy(alpha = 0.7f) to cs.onSurface
-    }
-}
+private val Base = Typography()
+
+// 피그마 스펙 반영 커스텀
+val AppTypography: Typography = Base.withFont(KoddiUDOnGothic).copy(
+    // Bold 22 / 20 / 16
+    titleLarge   = Base.titleLarge.copy(fontSize = 22.sp, fontWeight = FontWeight.Bold),
+    titleMedium  = Base.titleMedium.copy(fontSize = 20.sp, fontWeight = FontWeight.Bold),
+    bodyLarge    = Base.bodyLarge.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold),
+
+    // Regular 14
+    bodyMedium   = Base.bodyMedium.copy(fontSize = 14.sp, fontWeight = FontWeight.Normal),
+
+    // Small 12 / Large 24
+    labelSmall   = Base.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.Medium),
+    labelLarge = Base.labelLarge.copy(fontSize = 32.sp, fontWeight = FontWeight.Bold),
+    // Hero 54
+    displayLarge   = TextStyle(fontFamily = KoddiUDOnGothic, fontWeight = FontWeight.Bold,      fontSize = 54.sp),
+    headlineLarge  = TextStyle(fontFamily = KoddiUDOnGothic, fontWeight = FontWeight.ExtraBold, fontSize = 54.sp),
+)
