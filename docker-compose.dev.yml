@@ -1,5 +1,5 @@
 networks:
-  dev-network:
+  shared-network:
     driver: bridge
 
 services:
@@ -16,7 +16,7 @@ services:
     volumes:
       - mysql-shared-data:/var/lib/mysql
     networks:
-      - dev-network
+      - shared-network
     restart: unless-stopped
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
 
@@ -28,7 +28,7 @@ services:
     volumes:
       - redis-shared-data:/data
     networks:
-      - dev-network
+      - shared-network
     restart: unless-stopped
 
   springapp-dev:
@@ -56,7 +56,7 @@ services:
       - mysql-shared
       - redis-shared
     networks:
-      - dev-network
+      - shared-network
     restart: unless-stopped
 
 volumes:
