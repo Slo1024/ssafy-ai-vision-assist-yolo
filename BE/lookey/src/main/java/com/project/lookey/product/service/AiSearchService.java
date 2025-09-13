@@ -86,4 +86,60 @@ public class AiSearchService {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "서비스 처리 중 오류가 발생했습니다.");
         }
     }
+
+    public String findProductDirection(MultipartFile currentFrame, String productName) {
+        try {
+            MultipartBodyBuilder builder = new MultipartBodyBuilder();
+
+            // 현재 화면 이미지 추가
+            ByteArrayResource resource = new ByteArrayResource(currentFrame.getBytes()) {
+                @Override
+                public String getFilename() {
+                    return currentFrame.getOriginalFilename();
+                }
+            };
+            builder.part("current_frame", resource);
+
+            // 상품명 추가
+            builder.part("product_name", productName);
+
+            Map<String, Object> response = webClient
+                    .post()
+                    .uri(aiServerUrl + "/api/product/search/location/ai")
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(BodyInserters.fromMultipartData(builder.build()))
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+
+            if (response != null) {
+                String directionBucket = (String) response.get("direction_bucket");
+                if (directionBucket != null && !directionBucket.isBlank()) {
+                    return directionBucket;
+                } else {
+                    log.warn("AI 서버에서 direction_bucket을 찾을 수 없습니다.");
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "현재 화면에서 해당 상품을 찾을 수 없습니다.");
+                }
+            } else {
+                log.warn("AI 서버에서 빈 응답을 받았습니다.");
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "AI 서버에서 응답을 받지 못했습니다.");
+            }
+
+        } catch (WebClientResponseException e) {
+            log.error("AI 서버 HTTP 오류 - 상태코드: {}, 메시지: {}", e.getStatusCode(), e.getMessage());
+            if (e.getStatusCode().equals(HttpStatus.NOT_FOUND)) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "현재 화면에서 해당 상품을 찾을 수 없습니다.");
+            } else if (e.getStatusCode().is5xxServerError()) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "AI 서버에 일시적인 문제가 발생했습니다.");
+            } else {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI 서버 요청이 올바르지 않습니다.");
+            }
+        } catch (IOException e) {
+            log.error("이미지 파일 읽기 오류", e);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미지 파일을 읽을 수 없습니다.");
+        } catch (Exception e) {
+            log.error("AI 서버 통신 중 예상치 못한 오류", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "서비스 처리 중 오류가 발생했습니다.");
+        }
+    }
 }
