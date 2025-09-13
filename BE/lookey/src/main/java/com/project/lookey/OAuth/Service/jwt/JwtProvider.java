@@ -16,20 +16,28 @@ public class JwtProvider {
     @Value("${jwt.secret}")
     private String secretKey;
 
+    // Access Token: 30분
+    private final long ACCESS_TOKEN_EXPIRATION_MS = 1000L * 60 * 30;
+
+    // Refresh Token: 7일
+    private final long REFRESH_TOKEN_EXPIRATION_MS = 1000L * 60 * 60 * 24 * 7;
+
     // JWT 유효기간: 7일
-    private final long EXPIRATION_TIME = 1000L * 60 * 60 * 24 * 7;
+    // private final long EXPIRATION_TIME = 1000L * 60 * 60 * 24 * 7;
 
-    public String createToken(Integer userId, String email) {
+    public String createToken(Number userId, String email) {
         Date now = new Date();
-        Date expiry = new Date(now.getTime() + EXPIRATION_TIME);
+        Date expiry = new Date(now.getTime() + ACCESS_TOKEN_EXPIRATION_MS);
 
-        return Jwts.builder()
+        String token = Jwts.builder()
                 .setSubject(email)
                 .claim("userId", userId)
                 .setIssuedAt(now)
                 .setExpiration(expiry)
                 .signWith(Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS256)
                 .compact();
+
+        return token;
     }
 
     public Claims parseClaims(String token) {
@@ -38,6 +46,24 @@ public class JwtProvider {
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
+    }
+
+    public String createRefreshToken(Integer userId) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + REFRESH_TOKEN_EXPIRATION_MS);
+
+        return Jwts.builder()
+                .setSubject(userId.toString())
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(SignatureAlgorithm.HS512, secretKey)
+                .compact();
+    }
+
+    // Refresh Token에서 userId 추출
+    public Integer getUserIdFromToken(String token) {
+        Claims claims = parseClaims(token);
+        return claims.get("userId", Integer.class);
     }
 }
 
