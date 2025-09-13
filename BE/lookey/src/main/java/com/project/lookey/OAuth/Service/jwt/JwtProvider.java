@@ -7,6 +7,7 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
@@ -52,11 +53,13 @@ public class JwtProvider {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + REFRESH_TOKEN_EXPIRATION_MS);
 
+        SecretKey key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
+
         return Jwts.builder()
                 .setSubject(userId.toString())
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
-                .signWith(SignatureAlgorithm.HS512, secretKey)
+                .signWith(key, SignatureAlgorithm.HS512)
                 .compact();
     }
 
