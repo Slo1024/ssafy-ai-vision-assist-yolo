@@ -31,6 +31,8 @@ public class AuthController {
     public ResponseEntity<Map<String, Object>> loginWithGoogle(
             @RequestHeader("Authorization") String authorizationHeader
     ) {
+        System.out.println("[DEBUG] Authorization: " + authorizationHeader);
+
         if (!authorizationHeader.startsWith("Bearer ")) {
             return ResponseEntity.badRequest().body(Map.of(
                     "status", 400,
@@ -39,30 +41,53 @@ public class AuthController {
         }
 
         String idToken = authorizationHeader.substring(7);
-        GoogleIdToken.Payload payload = googleVerifierService.verify(idToken);
+        GoogleIdToken.Payload payload;
+
+        try {
+            payload = googleVerifierService.verify(idToken);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of(
+                    "status", 500,
+                    "message", "Google OAuth 검증 실패: " + e.getMessage()
+            ));
+        }
 
         String email = payload.getEmail();
         String name = (String) payload.get("name");
+        System.out.println("[DEBUG] payload email: " + email + ", name: " + name);
 
         // 유저가 없으면 db에 저장
-        User user = userRepository.findByEmail(email)
-                .orElseGet(() -> {
-                    User newUser = userRepository.save(User.builder()
+        User user;
+        try {
+            user = userRepository.findByEmail(email)
+                    .orElseGet(() -> userRepository.save(User.builder()
                             .email(email)
                             .name(name)
-                            .build());
-                    userRepository.flush(); // ID 보장
-                    return newUser;
-                });
+                            .build()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of(
+                    "status", 500,
+                    "message", "DB 저장 실패: " + e.getMessage()
+            ));
+        }
 
         String jwt = jwtProvider.createToken(user.getId(), user.getEmail());
+        System.out.println("[DEBUG] JWT: " + jwt + ", userId: " + user.getId());
 
         //jwtRedisService.saveToken(jwt, user.getId().longValue(), 7 * 24 * 60 * 60L);
 
-        Map<String, Object> body = new HashMap<>();
-        body.put("jwtToken", jwt);
-        body.put("userId", user.getId());
+        Map<String, Object> data = Map.of(
+                "jwtToken", jwt,
+                "userId", user.getId()
+        );
 
-        return ResponseUtil.ok("로그인 성공", body);
+        Map<String, Object> response = Map.of(
+                "message", "로그인 성공",
+                "data", data
+        );
+
+        return ResponseEntity.ok(response);
     }
 }
