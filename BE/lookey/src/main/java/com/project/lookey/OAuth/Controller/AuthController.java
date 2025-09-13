@@ -31,7 +31,6 @@ public class AuthController {
     public ResponseEntity<Map<String, Object>> loginWithGoogle(
             @RequestHeader("Authorization") String authorizationHeader
     ) {
-        System.out.println("[DEBUG] Authorization: " + authorizationHeader);
 
         if (!authorizationHeader.startsWith("Bearer ")) {
             return ResponseEntity.badRequest().body(Map.of(
@@ -55,7 +54,6 @@ public class AuthController {
 
         String email = payload.getEmail();
         String name = (String) payload.get("name");
-        System.out.println("[DEBUG] payload email: " + email + ", name: " + name);
 
         // 유저가 없으면 db에 저장
         User user;
@@ -74,7 +72,6 @@ public class AuthController {
         }
 
         String jwt = jwtProvider.createToken(user.getId(), user.getEmail());
-        System.out.println("[DEBUG] JWT: " + jwt + ", userId: " + user.getId());
 
         //jwtRedisService.saveToken(jwt, user.getId().longValue(), 7 * 24 * 60 * 60L);
 
