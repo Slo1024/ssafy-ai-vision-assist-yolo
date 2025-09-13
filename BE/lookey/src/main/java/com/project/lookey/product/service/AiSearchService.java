@@ -6,12 +6,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.List;
@@ -22,7 +25,7 @@ import java.util.Map;
 @Slf4j
 public class AiSearchService {
 
-    private final RestTemplate restTemplate;
+    private final WebClient webClient;
     private final ObjectMapper objectMapper;
 
     @Value("${ai.search.url:http://localhost:8000}")
@@ -30,57 +33,57 @@ public class AiSearchService {
 
     public List<String> findMatchedProducts(MultipartFile[] images, List<String> cartProductNames) {
         try {
-            String url = aiServerUrl + "/api/product/search/ai";
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-
-            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+            MultipartBodyBuilder builder = new MultipartBodyBuilder();
 
             // 이미지 4장 추가
-            for (int i = 0; i < images.length; i++) {
-                MultipartFile image = images[i];
+            for (MultipartFile image : images) {
                 ByteArrayResource resource = new ByteArrayResource(image.getBytes()) {
                     @Override
                     public String getFilename() {
                         return image.getOriginalFilename();
                     }
                 };
-                body.add("shelf_images", resource);
+                builder.part("shelf_images", resource);
             }
 
             // 장바구니 상품명 목록을 JSON 문자열로 변환하여 추가
             String cartProductNamesJson = objectMapper.writeValueAsString(cartProductNames);
-            body.add("cart_product_names", cartProductNamesJson);
+            builder.part("cart_product_names", cartProductNamesJson);
 
-            HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+            Map<String, Object> response = webClient
+                    .post()
+                    .uri(aiServerUrl + "/api/product/search/ai")
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(BodyInserters.fromMultipartData(builder.build()))
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
 
-            ResponseEntity<Map> response = restTemplate.exchange(
-                    url, 
-                    HttpMethod.POST, 
-                    requestEntity, 
-                    Map.class
-            );
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                Map<String, Object> responseBody = response.getBody();
+            if (response != null) {
                 @SuppressWarnings("unchecked")
-                List<String> matchedNames = (List<String>) responseBody.get("matched_names");
+                List<String> matchedNames = (List<String>) response.get("matched_names");
                 return matchedNames != null ? matchedNames : List.of();
             } else {
-                log.error("AI 서버 응답 오류: {}", response.getStatusCode());
-                return List.of();
+                log.warn("AI 서버에서 빈 응답을 받았습니다.");
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "AI 서버에서 응답을 받지 못했습니다.");
             }
 
+        } catch (WebClientResponseException e) {
+            log.error("AI 서버 HTTP 오류 - 상태코드: {}, 메시지: {}", e.getStatusCode(), e.getMessage());
+            if (e.getStatusCode().is5xxServerError()) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "AI 서버에 일시적인 문제가 발생했습니다.");
+            } else {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI 서버 요청이 올바르지 않습니다.");
+            }
         } catch (JsonProcessingException e) {
-            log.error("JSON 변환 오류", e);
-            return List.of();
+            log.error("장바구니 상품명 JSON 변환 오류", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "요청 데이터 처리 중 오류가 발생했습니다.");
         } catch (IOException e) {
             log.error("이미지 파일 읽기 오류", e);
-            return List.of();
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미지 파일을 읽을 수 없습니다.");
         } catch (Exception e) {
-            log.error("AI 서버 통신 오류", e);
-            return List.of();
+            log.error("AI 서버 통신 중 예상치 못한 오류", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "서비스 처리 중 오류가 발생했습니다.");
         }
     }
 }
