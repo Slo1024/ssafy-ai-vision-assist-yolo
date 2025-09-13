@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -45,21 +46,23 @@ public class AuthController {
 
         // 유저가 없으면 db에 저장
         User user = userRepository.findByEmail(email)
-                .orElseGet(() -> userRepository.save(User.builder()
-                        .email(email)
-                        .name(name)
-                        .build()));
+                .orElseGet(() -> {
+                    User newUser = userRepository.save(User.builder()
+                            .email(email)
+                            .name(name)
+                            .build());
+                    userRepository.flush(); // ID 보장
+                    return newUser;
+                });
 
         String jwt = jwtProvider.createToken(user.getId(), user.getEmail());
 
-        jwtRedisService.saveToken(jwt, user.getId().longValue(), 7 * 24 * 60 * 60L);
+        //jwtRedisService.saveToken(jwt, user.getId().longValue(), 7 * 24 * 60 * 60L);
 
-        return ResponseUtil.ok(
-                "로그인 성공",
-                Map.of(
-                        "jwtToken", jwt,
-                        "userId", user.getId()
-                )
-        );
+        Map<String, Object> body = new HashMap<>();
+        body.put("jwtToken", jwt);
+        body.put("userId", user.getId());
+
+        return ResponseUtil.ok("로그인 성공", body);
     }
 }
