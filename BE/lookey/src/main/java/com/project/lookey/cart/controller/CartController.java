@@ -21,7 +21,7 @@ public class CartController {
 
     @GetMapping
     public ResponseEntity<?> list(
-            @AuthenticationPrincipal(expression = "id") Integer userId
+            @AuthenticationPrincipal(expression = "userId") Integer userId
     ) {
         CartListResponse data = cartService.getMyCart(userId);
         return ResponseEntity.ok(Map.of(
@@ -33,7 +33,7 @@ public class CartController {
 
     @GetMapping("/search/{searchword}")
     public ResponseEntity<?> search(
-            @AuthenticationPrincipal(expression = "id") Integer userId,
+            @AuthenticationPrincipal(expression = "userId") Integer userId,
             @PathVariable("searchword") String searchword
     ) {
         ProductSearchResponse data = cartService.searchProducts(searchword);
@@ -46,7 +46,7 @@ public class CartController {
 
     @PostMapping
     public ResponseEntity<?> add(
-            @AuthenticationPrincipal(expression = "id") Integer userId,
+            @AuthenticationPrincipal(expression = "userId") Integer userId,
             @Valid @RequestBody CartAddRequest request
     ) {
         cartService.addItem(userId, request);
@@ -59,7 +59,7 @@ public class CartController {
 
     @DeleteMapping(consumes = "application/json")
     public ResponseEntity<?> delete(
-            @AuthenticationPrincipal(expression = "id") Integer userId,
+            @AuthenticationPrincipal(expression = "userId") Integer userId,
             @Valid @RequestBody CartRemoveRequest request
     ) {
         cartService.removeItem(userId, request);
