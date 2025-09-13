@@ -24,7 +24,6 @@ public class GoogleVerifierService {
 
     public GoogleIdToken.Payload verify(String idTokenString) {
         try {
-            System.out.println("검증 시도 중인 토큰: " + idTokenString);
             GoogleIdToken idToken = verifier.verify(idTokenString);
 
             if (idToken == null) {

@@ -1,7 +1,6 @@
 package com.project.lookey.OAuth.Controller;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
-import com.project.lookey.Common.ResponseUtil;
 import com.project.lookey.OAuth.Entity.User;
 import com.project.lookey.OAuth.Repository.UserRepository;
 import com.project.lookey.OAuth.Service.Redis.JwtRedisService;
@@ -72,8 +71,9 @@ public class AuthController {
         }
 
         String jwt = jwtProvider.createToken(user.getId(), user.getEmail());
+        String refreshToken = jwtProvider.createRefreshToken(user.getId());
 
-        //jwtRedisService.saveToken(jwt, user.getId().longValue(), 7 * 24 * 60 * 60L);
+        jwtRedisService.saveRefreshToken(refreshToken, user.getId(), 7 * 24 * 60 * 60L);
 
         Map<String, Object> data = Map.of(
                 "jwtToken", jwt,
@@ -87,4 +87,37 @@ public class AuthController {
 
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<Map<String, Object>> refreshToken(
+            @RequestHeader("Authorization") String refreshTokenHeader
+    ) {
+        if (!refreshTokenHeader.startsWith("Bearer ")) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Invalid Header"));
+        }
+
+        String refreshToken = refreshTokenHeader.substring(7);
+
+        //  userId 추출
+        Integer userId;
+        try {
+            userId = jwtProvider.getUserIdFromToken(refreshToken);
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body(Map.of("message", "Invalid Token"));
+        }
+
+        // Redis 확인
+        String storedToken = jwtRedisService.getRefreshToken(userId);
+        if (storedToken == null || !storedToken.equals(refreshToken)) {
+            return ResponseEntity.status(401).body(Map.of("message", "Refresh Token invalid"));
+        }
+
+        // 새 Access Token 발급
+        String newAccessToken = jwtProvider.createToken(
+                userId,
+                userRepository.findById(userId).get().getEmail());
+
+        return ResponseEntity.ok(Map.of("jwtToken", newAccessToken));
+    }
+
 }
