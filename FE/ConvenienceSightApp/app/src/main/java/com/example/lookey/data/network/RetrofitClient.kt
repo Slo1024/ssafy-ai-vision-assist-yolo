@@ -9,7 +9,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    private const val BASE_URL = "https://localhot:8080/" // 실제 API 주소로 교체
+    private const val BASE_URL = "https://10.0.2.2:8082/" // 실제 API 주소로 교체
 //    private const val BASE_URL = "https://10.0.2.2:8443/" // HTTPS 8443 포트
 
     private val gson = GsonBuilder()

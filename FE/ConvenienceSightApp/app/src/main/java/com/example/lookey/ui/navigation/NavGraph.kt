@@ -23,7 +23,13 @@ fun AppNavGraph(
         composable(Routes.Home) {
             HomeScreen(
                 tts = tts,
-                onCart = { navController.navigate(Routes.Cart) }) // 필요한 파라미터에 맞게 호출
+                onCart = { navController.navigate(Routes.Cart) }, // 필요한 파라미터에 맞게 호출
+                onFindStore = { /* TODO: 외부 지도 또는 매장 리스트로 이동 */ },
+                onFindProduct = { navController.navigate(Routes.Scan.Camera) }, // ← 여기!
+                onAllergy = { /* TODO: 알레르기 화면으로 이동 */ },
+                onSettings = { /* TODO */ },
+                onGuide = { /* TODO: 사용법/가이드 화면 이동 */ },
+            )
         }
         composable(Routes.Login) {
             LoginScreen(
@@ -38,5 +44,15 @@ fun AppNavGraph(
         composable(Routes.Cart) {
             CartRoute()
         }
+
+        composable(Routes.Scan.Camera) {
+            ScanCameraScreen(
+                back = { navController.popBackStack() },
+
+            )
+        }
+
+
+
     }
 }

@@ -7,24 +7,22 @@ import org.springframework.stereotype.Service;
 import java.util.concurrent.TimeUnit;
 
 @Service
-@RequiredArgsConstructor
 public class JwtRedisService {
-
     private final RedisTemplate<String, String> redisTemplate;
 
-    // JWT를 Redis에 저장 (만료시간 설정 가능)
-    public void saveToken(String jwt, Long userId, long expireSeconds) {
-        redisTemplate.opsForValue().set(jwt, userId.toString(), expireSeconds, TimeUnit.SECONDS);
+    public JwtRedisService(RedisTemplate<String, String> redisTemplate) {
+        this.redisTemplate = redisTemplate;
     }
 
-    // JWT가 Redis에 있는지 확인 (블랙리스트용)
-    public boolean existsToken(String jwt) {
-        return redisTemplate.hasKey(jwt);
+    public void saveRefreshToken(String refreshToken, Integer userId, long expirationSeconds) {
+        redisTemplate.opsForValue().set("refresh:" + userId, refreshToken, expirationSeconds, TimeUnit.SECONDS);
     }
 
-    // JWT 삭제 (로그아웃 등)
-    public void deleteToken(String jwt) {
-        redisTemplate.delete(jwt);
+    public String getRefreshToken(Integer userId) {
+        return redisTemplate.opsForValue().get("refresh:" + userId);
+    }
+
+    public void deleteRefreshToken(Long userId) {
+        redisTemplate.delete("refresh:" + userId);
     }
 }
-

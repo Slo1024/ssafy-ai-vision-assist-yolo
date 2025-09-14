@@ -27,7 +27,7 @@ fun LooKeyTheme(
 
     MaterialTheme(
         colorScheme = scheme,        // ❗ AppColors(팔레트 아님), ColorScheme을 넣어야 함
-        typography  = AppTypography, // ❗ material3 Typography 타입 사용
+        typography  = AppTypography, // KoddiUDOnGothic 강제 반영
         content     = content
     )
 }

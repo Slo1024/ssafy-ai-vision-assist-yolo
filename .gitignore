@@ -191,4 +191,4 @@ FE/**/.yarn-integrity
 **/*.p12
 **/*.pfx
 **/keystore
-**/truststore
+**/truststoreBE/lookey/src/main/resources/application.properties
