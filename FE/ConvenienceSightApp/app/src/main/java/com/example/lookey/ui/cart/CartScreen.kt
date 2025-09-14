@@ -41,12 +41,16 @@ fun CartScreen(
         )
 
         Spacer(Modifier.height(28.dp))
-        MicActionButton(onClick = { onMicClick?.invoke() })
+        MicActionButton(onClick = { onMicClick?.invoke() }, sizeDp = 120)
         Spacer(Modifier.height(28.dp))
 
         when {
             query.isBlank() && cart.isNotEmpty() -> {
-                Text("내 장바구니", style = MaterialTheme.typography.titleLarge, modifier = Modifier.fillMaxWidth())
+                Text(
+                    "내 장바구니",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Spacer(Modifier.height(8.dp))
                 cart.forEach { line ->
                     PillListItem(
@@ -56,9 +60,11 @@ fun CartScreen(
                     )
                 }
             }
+
             query.isBlank() && cart.isEmpty() -> {
                 EmptyStateText("장바구니가 비어 있어요.\n검색해서 추가해보세요.")
             }
+
             results.isNotEmpty() -> {
                 SuggestionList(
                     items = results,
@@ -66,6 +72,7 @@ fun CartScreen(
                     shape = pill
                 )
             }
+
             else -> {
                 Text("검색 결과가 없어요", style = MaterialTheme.typography.labelLarge)
             }
