@@ -6,9 +6,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.lookey.core.platform.tts.TtsController
 import com.example.lookey.BuildConfig
-import com.example.lookey.ui.scan.ScanCameraScreen
 import com.example.lookey.ui.auth.LoginScreen
+import com.example.lookey.ui.cart.CartRoute
 import com.example.lookey.ui.home.HomeScreen
+import com.example.lookey.ui.cart.CartScreen
+import com.example.lookey.ui.scan.ScanCameraScreen
 
 @Composable
 fun AppNavGraph(
@@ -22,9 +24,9 @@ fun AppNavGraph(
         composable(Routes.Home) {
             HomeScreen(
                 tts = tts,
+                onCart = { navController.navigate(Routes.Cart) }, // 필요한 파라미터에 맞게 호출
                 onFindStore = { /* TODO: 외부 지도 또는 매장 리스트로 이동 */ },
                 onFindProduct = { navController.navigate(Routes.Scan.Camera) }, // ← 여기!
-                onCart = { /* TODO: 장바구니 화면으로 이동 */ },
                 onAllergy = { /* TODO: 알레르기 화면으로 이동 */ },
                 onSettings = { /* TODO */ },
                 onGuide = { /* TODO: 사용법/가이드 화면 이동 */ },
@@ -39,6 +41,9 @@ fun AppNavGraph(
                 },
                 tts = tts
             )
+        }
+        composable(Routes.Cart) {
+            CartRoute()
         }
 
         composable(Routes.Scan.Camera) {
