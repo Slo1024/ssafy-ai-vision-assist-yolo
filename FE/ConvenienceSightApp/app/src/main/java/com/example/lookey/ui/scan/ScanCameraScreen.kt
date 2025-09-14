@@ -1,86 +1,59 @@
+// app/src/main/java/com/example/lookey/ui/scan/ScanCameraScreen.kt
 package com.example.lookey.ui.scan
 
-import android.Manifest
-import android.util.Log
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.Preview
-import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.lookey.R
-import com.example.lookey.ui.scan.overlay.GridOverlay
-// ✅ 더미 루프용
+import com.example.lookey.domain.entity.DetectResult
+import com.example.lookey.ui.components.BannerMessage
+import com.example.lookey.ui.components.CameraPreviewBox
+import com.example.lookey.ui.components.FeaturePill
+import com.example.lookey.ui.components.MicActionButton
+import com.example.lookey.ui.components.TwoOptionToggle
+import com.example.lookey.ui.viewmodel.ScanViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlin.random.Random
-
-import com.example.lookey.ui.viewmodel.ScanViewModel
-import com.example.lookey.domain.entity.DetectResult
-import com.example.lookey.ui.components.BannerMessage
-
 
 @Composable
 fun ScanCameraScreen(
     back: () -> Unit,
     vm: ScanViewModel = viewModel()
 ) {
-    val ctx = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
     val ui by vm.ui.collectAsState()
+    var isGuideMode by remember { mutableStateOf(false) }
 
-    var hasPermission by remember { mutableStateOf(false) }
+    // 피그마/화면 스펙
+    val CAM_WIDTH = 320.dp
+    val CAM_HEIGHT = 630.dp
+    val CAM_TOP = 16.dp
 
-    val preview = remember { Preview.Builder().build() }
-    val previewView = remember { PreviewView(ctx) }
+    val MIC_SIZE = 72                 // 마이크 지름(dp)
+    val MIC_RISE = 32.dp              // 하단 경계선에서 더 위로 올리는 양
+    val PILL_BOTTOM_INSET = 75.dp     // Pill이 카메라 내부 하단 경계선과 겹치지 않도록 띄우는 값
 
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { res ->
-        hasPermission = (res[Manifest.permission.CAMERA] == true)
-    }
+    // 화면 루트(TopCenter) 기준 y 오프셋:
+    // 카메라 상단 여백 + 카메라 높이 - (마이크 반지름) - (추가 상승량)
+    val micCenterOffsetY = CAM_TOP + CAM_HEIGHT - (MIC_SIZE / 2).dp - MIC_RISE
 
-    LaunchedEffect(Unit) {
-        launcher.launch(arrayOf(Manifest.permission.CAMERA))
-        // 필요 시 음성까지:
-        // launcher.launch(arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO))
-    }
-
-    // ✅ 취소 안전한 더미 감지 루프
+    // 더미 인식 루프 (스캔 중일 때 2초마다 임의 감지)
     LaunchedEffect(ui.scanning) {
         if (ui.scanning) {
             while (isActive && ui.scanning) {
                 delay(2000)
                 vm.onDetected(
                     DetectResult(
-                        id = listOf("coke","pepsi","latte").random(),
+                        id = listOf("coke", "pepsi", "latte").random(),
                         name = "코카콜라 제로 500ml",
-                        price = 2200, promo = "1+1",
+                        price = 2200,
+                        promo = "1+1",
                         hasAllergy = Random.nextBoolean(),
                         allergyNote = "유당 포함",
                         confidence = 0.92f
@@ -90,177 +63,66 @@ fun ScanCameraScreen(
         }
     }
 
-    LaunchedEffect(hasPermission) {
-        if (!hasPermission) return@LaunchedEffect
-        val pf = ProcessCameraProvider.getInstance(ctx)
-        pf.addListener({
-            val provider = pf.get()
-            try {
-                preview.setSurfaceProvider(previewView.surfaceProvider)
-                provider.unbindAll()
-                provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview)
-            } catch (e: Exception) {
-                Log.e("Camera", "bind failed", e)
-            }
-        }, ContextCompat.getMainExecutor(ctx))
-    }
-
-    // (선택) 바인딩 해제
-    DisposableEffect(Unit) {
-        val pf = ProcessCameraProvider.getInstance(ctx)
-        onDispose { runCatching { pf.get().unbindAll() } }
-    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
-            .padding(WindowInsets.safeDrawing.asPaddingValues())
+            .windowInsetsPadding(WindowInsets.systemBars)
     ) {
-        // 카메라 프리뷰
-        AndroidView(
-            factory = { previewView },
-            modifier = Modifier.fillMaxSize()
-        )
-
-        // 격자
-        GridOverlay(modifier = Modifier.fillMaxSize())
-
-        // 중앙 흰 pill 버튼 (마이크 위)
-        FeaturePill(
-            text = if (ui.scanning) "상품 탐색중" else "상품 탐색 시작",
-            onClick = { vm.toggleScan() },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .offset(y = (-140).dp)
-        )
-
-        // ✅ 상단 배너 (이름 변경 반영)
+        // 상단 배너
         ui.banner?.let { b ->
             Box(Modifier.align(Alignment.TopCenter)) {
                 BannerMessage(banner = b, onDismiss = { vm.clearBanner() })
             }
         }
 
-        // 마이크 버튼
-        MicButton(
-            onClick = { /* TODO 음성인식 */ },
+        // 카메라 + 격자 + 오버레이(Pill)
+        CameraPreviewBox(
+            width = CAM_WIDTH,
+            height = CAM_HEIGHT,
+            topPadding = CAM_TOP,
+            corner = 12.dp,
+            modifier = Modifier.align(Alignment.TopCenter)
+        ) {
+            // 3열 그리드의 "가운데" 영역 중앙에, 하단에서 살짝 띄운 Pill
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(bottom = PILL_BOTTOM_INSET),
+                contentAlignment = Alignment.Center
+            ) {
+                FeaturePill(
+                    text = if (ui.scanning) "상품 탐색 중" else "상품 탐색 시작",
+                    onClick = { vm.toggleScan() },
+                    modifier = Modifier.width(CAM_WIDTH * 2 / 3) // 필요시 + 24.dp 정도로 살짝 넓혀도 OK
+                )
+            }
+        }
+
+        // 마이크 버튼: 카메라 하단 테두리에 '겹치게' 중앙 배치 (원의 중심이 경계선 근처)
+        MicActionButton(
+            onClick = { /* TODO: 음성 인식 */ },
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .offset(y = micCenterOffsetY),
+            sizeDp = MIC_SIZE
+        )
+
+        // 하단 토글: 카메라 폭보다 살짝 좁게
+        TwoOptionToggle(
+            leftText = "길 안내",
+            rightText = "상품 인식",
+            selectedLeft = isGuideMode,
+            onLeft = { isGuideMode = true /* TODO: Guide 모드 전환 */ },
+            onRight = { isGuideMode = false /* TODO: Scan 모드 전환 */ },
+            height = 56.dp,
+            elevation = 12.dp,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .offset(y = (-64).dp)
+                .width(CAM_WIDTH - 60.dp) // "살짝" 좁게; 12~24dp 정도로 줄이는 것도 추천
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(bottom = 8.dp)
         )
-
-        // 길안내/상품 인식 토글 (맨 아래)
-        BottomToggle(
-            left = "길 안내",
-            right = "상품 인식",
-            selectedRight = true,
-            onLeft = back,
-            onRight = {},
-            modifier = Modifier.align(Alignment.BottomCenter) // ✅ 정렬 보장
-        )
-    }
-}
-
-@Composable
-private fun FeaturePill(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .wrapContentSize()
-            .semantics { role = Role.Button; contentDescription = text }
-            .clickable(onClick = onClick)
-    ) {
-        Image(
-            painter = painterResource(R.drawable.ic_feature_rec),
-            contentDescription = null
-        )
-        Text(
-            text = text,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.align(Alignment.Center)
-        )
-    }
-}
-
-@Composable
-private fun MicButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    size: Int = 72
-) {
-    Box(
-        modifier = modifier
-            .size(size.dp)
-            .semantics { role = Role.Button; contentDescription = "음성 인식" }
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Image(
-            painter = painterResource(R.drawable.ic_ellipse_for_mic),
-            contentDescription = null,
-            modifier = Modifier.matchParentSize()
-        )
-        Image(
-            painter = painterResource(R.drawable.ic_mic),
-            contentDescription = null,
-            colorFilter = ColorFilter.tint(Color.White),
-            modifier = Modifier.size((size * 0.45f).dp)
-        )
-    }
-}
-
-@Composable
-private fun BottomToggle(
-    left: String,
-    right: String,
-    selectedRight: Boolean,
-    onLeft: () -> Unit,
-    onRight: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val h = 48.dp
-    Row(
-        modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp),
-        horizontalArrangement = Arrangement.Center
-    ) {
-        Surface(
-            color = Color.Transparent,
-            contentColor = MaterialTheme.colorScheme.primary,
-            shape = MaterialTheme.shapes.extraLarge,
-            modifier = Modifier
-                .height(h)
-                .clickable(onClick = onLeft)
-                .semantics { role = Role.Button; contentDescription = left }
-        ) {
-            Text(
-                left,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-                fontWeight = FontWeight.Bold
-            )
-        }
-        Spacer(Modifier.width(8.dp))
-        Surface(
-            color = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            shape = MaterialTheme.shapes.extraLarge,
-            modifier = Modifier
-                .height(h)
-                .clickable(onClick = onRight)
-                .semantics { role = Role.Button; contentDescription = right }
-        ) {
-            Text(
-                right,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-                fontWeight = FontWeight.Bold
-            )
-        }
     }
 }

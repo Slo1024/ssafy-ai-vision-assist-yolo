@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 fun GridOverlay(
     modifier: Modifier = Modifier,
     cols: Int = 3,
-    rows: Int = 5,
+    rows: Int = 3,
     lineWidth: Dp = 1.dp,
     lineColor: Color = Color.White.copy(alpha = 0.7f)
 ) {
