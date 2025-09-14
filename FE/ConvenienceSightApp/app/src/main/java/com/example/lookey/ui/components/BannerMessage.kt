@@ -28,21 +28,22 @@ fun BannerMessage(
     Surface(
         color = bg,
         contentColor = fg,
-        shape = RoundedCornerShape(8.dp),
-        tonalElevation = 2.dp,
+        shape = RoundedCornerShape(30.dp),
+        tonalElevation = 0.dp,
         modifier = modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(vertical = 40.dp)
             .semantics { contentDescription = banner.text }
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = banner.text,
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                maxLines = 2
             )
             TextButton(onClick = onDismiss) {
                 Text(text = "닫기", style = MaterialTheme.typography.labelLarge)
@@ -58,10 +59,10 @@ private fun bannerColorsForType(
     val cs = MaterialTheme.colorScheme
     return when (type) {
         ResultFormatter.Banner.Type.WARNING ->
-            cs.secondary.copy(alpha = 0.18f) to cs.onSecondary
+            cs.secondary to cs.onSecondary
         ResultFormatter.Banner.Type.INFO ->
             cs.primary.copy(alpha = 0.12f) to cs.primary
         ResultFormatter.Banner.Type.SUCCESS ->
-            cs.surfaceVariant.copy(alpha = 0.7f) to cs.onSurface
+            cs.surfaceVariant to cs.onSurface
     }
 }

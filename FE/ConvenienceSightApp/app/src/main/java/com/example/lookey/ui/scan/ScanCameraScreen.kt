@@ -2,9 +2,10 @@
 package com.example.lookey.ui.scan
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -12,11 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.lookey.domain.entity.DetectResult
-import com.example.lookey.ui.components.BannerMessage
-import com.example.lookey.ui.components.CameraPreviewBox
-import com.example.lookey.ui.components.FeaturePill
-import com.example.lookey.ui.components.MicActionButton
-import com.example.lookey.ui.components.TwoOptionToggle
+import com.example.lookey.ui.components.*
 import com.example.lookey.ui.viewmodel.ScanViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -69,14 +66,7 @@ fun ScanCameraScreen(
             .background(Color.White)
             .windowInsetsPadding(WindowInsets.systemBars)
     ) {
-        // 상단 배너
-        ui.banner?.let { b ->
-            Box(Modifier.align(Alignment.TopCenter)) {
-                BannerMessage(banner = b, onDismiss = { vm.clearBanner() })
-            }
-        }
-
-        // 카메라 + 격자 + 오버레이(Pill)
+        // 카메라 + 격자 + 오버레이(Pill + 배너 + 모달)
         CameraPreviewBox(
             width = CAM_WIDTH,
             height = CAM_HEIGHT,
@@ -84,7 +74,7 @@ fun ScanCameraScreen(
             corner = 12.dp,
             modifier = Modifier.align(Alignment.TopCenter)
         ) {
-            // 3열 그리드의 "가운데" 영역 중앙에, 하단에서 살짝 띄운 Pill
+            // ✅ FeaturePill: 3열 "가운데" 영역 중앙
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -95,12 +85,51 @@ fun ScanCameraScreen(
                 FeaturePill(
                     text = if (ui.scanning) "상품 탐색 중" else "상품 탐색 시작",
                     onClick = { vm.toggleScan() },
-                    modifier = Modifier.width(CAM_WIDTH * 2 / 3) // 필요시 + 24.dp 정도로 살짝 넓혀도 OK
+                    modifier = Modifier.width(CAM_WIDTH * 2 / 3)
                 )
+            }
+
+            // ✅ 상단 배너 (카메라 박스 안에서만 보임)
+            ui.banner?.let { b ->
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(12.dp)
+                ) {
+                    BannerMessage(banner = b, onDismiss = { vm.clearBanner() })
+                }
+            }
+
+            // ✅ ConfirmModal (카메라 박스 안에서만 보임)
+            val cartTarget = ui.cartTarget
+            if (ui.showCartModal && cartTarget != null) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) { vm.onCartModalDismiss() }
+                )
+                // 모달 박스
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .padding(horizontal = 24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    ConfirmModal(
+                        text = "\"${cartTarget.name}\"가 장바구니에 있습니다. 제거할까요?",
+                        yesText = "예",
+                        noText = "아니요",
+                        onYes = { vm.onCartRemoveConfirm() },
+                        onNo = { vm.onCartModalDismiss() }
+                    )
+                }
             }
         }
 
-        // 마이크 버튼: 카메라 하단 테두리에 '겹치게' 중앙 배치 (원의 중심이 경계선 근처)
+        // 🎙 마이크 버튼: 카메라 하단 테두리에 겹치게 중앙 배치
         MicActionButton(
             onClick = { /* TODO: 음성 인식 */ },
             modifier = Modifier
@@ -109,7 +138,7 @@ fun ScanCameraScreen(
             sizeDp = MIC_SIZE
         )
 
-        // 하단 토글: 카메라 폭보다 살짝 좁게
+        // ⬜ 하단 토글: 카메라 폭보다 살짝 좁게
         TwoOptionToggle(
             leftText = "길 안내",
             rightText = "상품 인식",
@@ -120,7 +149,7 @@ fun ScanCameraScreen(
             elevation = 12.dp,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .width(CAM_WIDTH - 60.dp) // "살짝" 좁게; 12~24dp 정도로 줄이는 것도 추천
+                .width(CAM_WIDTH - 60.dp)
                 .windowInsetsPadding(WindowInsets.navigationBars)
                 .padding(bottom = 8.dp)
         )
