@@ -10,8 +10,7 @@ class Repository {
     // ===================== 회원 =====================
 
     //로그인
-    suspend fun googleAuth(accessToken: String): Response<ApiResponse<LoginResponse>> {
-        val headerValue = "Bearer $accessToken"
-        return apiService.googleLogin(authorizationHeader = headerValue)
+    suspend fun googleAuth(idToken: String): Response<LoginResponse> {
+        return RetrofitClient.apiService.googleLogin("Bearer $idToken")
     }
 }
