@@ -10,6 +10,7 @@ import com.example.lookey.ui.auth.LoginScreen
 import com.example.lookey.ui.cart.CartRoute
 import com.example.lookey.ui.home.HomeScreen
 import com.example.lookey.ui.cart.CartScreen
+import com.example.lookey.ui.scan.ScanCameraScreen
 
 @Composable
 fun AppNavGraph(
