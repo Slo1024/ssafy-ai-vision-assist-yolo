@@ -7,7 +7,9 @@ import androidx.navigation.compose.composable
 import com.example.lookey.core.platform.tts.TtsController
 import com.example.lookey.BuildConfig
 import com.example.lookey.ui.auth.LoginScreen
+import com.example.lookey.ui.cart.CartRoute
 import com.example.lookey.ui.home.HomeScreen
+import com.example.lookey.ui.cart.CartScreen
 
 @Composable
 fun AppNavGraph(
@@ -19,7 +21,9 @@ fun AppNavGraph(
         startDestination = if (BuildConfig.USE_AUTH) Routes.Login else Routes.Home // ★ 토글 한 줄
     ) {
         composable(Routes.Home) {
-            HomeScreen(tts = tts) // 필요한 파라미터에 맞게 호출
+            HomeScreen(
+                tts = tts,
+                onCart = { navController.navigate(Routes.Cart) }) // 필요한 파라미터에 맞게 호출
         }
         composable(Routes.Login) {
             LoginScreen(
@@ -30,6 +34,9 @@ fun AppNavGraph(
                 },
                 tts = tts
             )
+        }
+        composable(Routes.Cart) {
+            CartRoute()
         }
     }
 }
