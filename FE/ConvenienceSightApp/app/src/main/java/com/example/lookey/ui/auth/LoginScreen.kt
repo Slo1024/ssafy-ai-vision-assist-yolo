@@ -23,6 +23,7 @@ import com.example.lookey.core.platform.tts.TtsController
 import com.example.lookey.data.network.RetrofitClient
 import com.example.lookey.data.local.TokenProvider
 import com.example.lookey.ui.components.GoogleSignInButton
+import com.example.lookey.util.PrefUtil
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
@@ -144,14 +145,16 @@ private fun sendIdTokenToServer(
         try {
             val response = RetrofitClient.apiService.googleLogin("Bearer $idToken")
             if (response.isSuccessful) {
-                val jwt = response.body()?.result?.jwtToken
-                if (!jwt.isNullOrEmpty()) {
-                    TokenProvider.token = jwt // 저장
+                val jwt = response.body()?.data?.jwtToken
+                val userId = response.body()?.data?.userId
+                if (!jwt.isNullOrEmpty() && userId != null) {
+                    TokenProvider.token = jwt
+                    PrefUtil.saveUserId(context, userId.toString())
                     CoroutineScope(Dispatchers.Main).launch {
                         onSignedIn()
                     }
                 } else {
-                    Log.e("LoginScreen", "JWT가 비어있습니다.")
+                    Log.e("LoginScreen", "JWT 또는 userId가 비어있습니다.")
                 }
             } else {
                 Log.e("LoginScreen", "서버 로그인 실패: ${response.code()} ${response.message()}")

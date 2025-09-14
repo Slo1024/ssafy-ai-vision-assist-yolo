@@ -4,9 +4,13 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.launch
-import com.example.lookey.data.network.Repository
 import com.example.lookey.data.local.TokenProvider
+import com.example.lookey.data.network.Repository
+import com.example.lookey.data.model.LoginResponse
+import com.example.lookey.data.model.LoginData
+
+import kotlinx.coroutines.launch
+
 import com.example.lookey.util.PrefUtil
 
 class AuthViewModel : ViewModel() {
@@ -24,13 +28,12 @@ class AuthViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val response = repository.googleAuth(idToken)
-
                 if (response.isSuccessful) {
                     Log.d("API", "성공: ${response.body()}")
 
                     val body = response.body()
-                    val jwt = body?.result?.jwtToken  // result 내부에서 JWT 꺼냄
-                    val userId = body?.result?.userId // 필요 시 함께 사용
+                    val jwt = body?.data?.jwtToken
+                    val userId = body?.data?.userId
 
                     // 토큰 저장
                     if (jwt != null) {
@@ -38,7 +41,7 @@ class AuthViewModel : ViewModel() {
                         TokenProvider.token = jwt // RetrofitClient에서 사용할 수 있게 저장
                     }
                     if (userId != null) {
-                        PrefUtil.saveUserId(context = context, userId = userId)
+                        PrefUtil.saveUserId(context, userId.toString())
                     }
 
                     onResult(ResultType.EXISTING_USER)

@@ -8,8 +8,8 @@ import retrofit2.http.POST
 
 interface ApiService {
     // 구글
-    @POST("/api/auth/google")
+    @POST("api/auth/google")
     suspend fun googleLogin(
         @Header("Authorization") authorizationHeader: String
-    ): Response<ApiResponse<LoginResponse>>
+    ): Response<LoginResponse>
 }
