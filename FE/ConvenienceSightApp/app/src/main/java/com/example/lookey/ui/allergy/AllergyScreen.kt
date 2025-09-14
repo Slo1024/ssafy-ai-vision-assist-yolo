@@ -57,7 +57,7 @@ fun AllergyScreen(
                 }
             }
             query.isBlank() && allergies.isEmpty() -> {
-                EmptyStateText("등록된 알레르기가 없어요.\n검색해서 추가해보세요.")
+                EmptyStateText("등록된 알레르기가\n없어요.\n검색해서 추가해보세요.")
             }
             results.isNotEmpty() -> {
                 SuggestionList(
@@ -74,7 +74,7 @@ fun AllergyScreen(
 
     if (pendingItem != null) {
         ConfirmDialog(
-            message = "${pendingItem}를\n내 알레르기에 추가하시겠습니까?",
+            message = "${pendingItem}를\n내 알레르기에\n추가하시겠습니까?",
             onConfirm = {
                 viewModel.addAllergy(pendingItem!!)
                 pendingItem = null
