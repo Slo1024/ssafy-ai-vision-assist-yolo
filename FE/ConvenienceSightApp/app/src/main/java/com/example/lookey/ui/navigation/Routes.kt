@@ -5,6 +5,7 @@ object Routes {
     const val Login = "login"
     const val Home = "home"
     const val Cart = "cart"
+    const val Allergy = "allergy"
     object Scan {
         const val Intro = "scan/intro"
         const val Camera = "scan/camera"
