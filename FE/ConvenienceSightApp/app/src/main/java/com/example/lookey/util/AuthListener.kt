@@ -1,4 +1,5 @@
 package com.example.lookey.util
 
-class AuthListener {
+interface AuthListener {
+    fun onLogout()
 }

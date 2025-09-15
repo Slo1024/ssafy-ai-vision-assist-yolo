@@ -1,16 +1,23 @@
 package com.example.lookey.data.network
 
 import com.example.lookey.data.local.TokenProvider
-import com.google.gson.FieldNamingPolicy
 import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
+import android.content.Context
+import android.content.Intent
+import android.util.Log
+import com.example.lookey.data.model.RefreshRequest
+import com.example.lookey.util.AuthListener
+import com.example.lookey.util.PrefUtil
+import kotlinx.coroutines.runBlocking
 
 object RetrofitClient {
     private const val BASE_URL = "https://j13e101.p.ssafy.io/dev/" // 실제 API 주소로 교체
-//    private const val BASE_URL = "https://10.0.2.2:8443/" // HTTPS 8443 포트
+
+    var authListener: AuthListener? = null
 
     private val gson = GsonBuilder()
         .create()
@@ -21,72 +28,70 @@ object RetrofitClient {
         .writeTimeout(30, TimeUnit.SECONDS) // 쓰기 타임아웃 30초
         .hostnameVerifier { _, _ -> true } // 호스트명 검증 비활성화 (로컬 테스트용)
         .addInterceptor { chain ->
+            val originalRequest = chain.request()
+            val context = originalRequest.tag(Context::class.java)
             val builder = chain.request().newBuilder()
                 .addHeader("Content-Type", "application/json")
-                .addHeader("Type", "BEARER")  // ✅ Type 헤더 추가
 
-            // JWT 토큰이 있으면 Authorization 헤더에 추가
-            TokenProvider.token?.let {
-                builder.addHeader("Authorization", "Bearer $it")
+            // Access Token 헤더 추가
+            val accessToken = TokenProvider.token ?: context?.let { PrefUtil.getJwtToken(it) }
+            accessToken?.let { builder.addHeader("Authorization", "Bearer $it") }
+
+            var request = builder.build()
+            var response = chain.proceed(request)
+
+            if (response.code == 401 && context != null) {
+                // Access Token 만료 → Refresh Token으로 재발급 시도
+                val refreshToken = PrefUtil.getRefreshToken(context)
+                if (!refreshToken.isNullOrEmpty()) {
+                    val newToken = refreshAccessToken(refreshToken)
+                    if (!newToken.isNullOrEmpty()) {
+                        PrefUtil.saveJwtToken(context, newToken)
+                        TokenProvider.token = newToken
+
+                        // 새 토큰으로 요청 재시도
+                        request = originalRequest.newBuilder()
+                            .header("Authorization", "Bearer $newToken")
+                            .build()
+                        response = chain.proceed(request)
+                    } else {
+                        // Refresh Token 만료 → 로그아웃
+                        PrefUtil.clear(context)
+                        authListener?.onLogout()
+                    }
+                } else {
+                    PrefUtil.clear(context)
+                    authListener?.onLogout()
+                }
             }
 
-            val request = builder.build()
-
-            // 요청 로그
-            android.util.Log.d("RetrofitClient", "=== API 요청 시작 ===")
-            android.util.Log.d("RetrofitClient", "URL: ${request.url}")
-            android.util.Log.d("RetrofitClient", "Method: ${request.method}")
-            android.util.Log.d("RetrofitClient", "Headers: ${request.headers}")
-
-            try {
-                val response = chain.proceed(request)
-
-                // 응답 로그
-                android.util.Log.d("RetrofitClient", "=== API 응답 받음 ===")
-                android.util.Log.d("RetrofitClient", "Status: ${response.code}")
-                android.util.Log.d("RetrofitClient", "Message: ${response.message}")
-                android.util.Log.d("RetrofitClient", "result: ${response.request}")
-
-                response
-            } catch (e: Exception) {
-                android.util.Log.e("RetrofitClient", "=== API 호출 실패 ===", e)
-                throw e
-            }
-
-//            val request = chain.request().newBuilder()
-//                .addHeader("Content-Type", "application/json; charset=utf8")
-//                .addHeader("Type", "BEARER")
-//                .addHeader("Access-Token", TokenProvider.token ?: "1")
-//                .build()
-//
-//            val response = chain.proceed(request)
-//
-//            // 📌 여기서 응답 로그 찍기!
-//            val responseBody = response.peekBody(Long.MAX_VALUE).string()
-//            android.util.Log.d("RetrofitClient", "서버 응답 본문:\n$responseBody")
-//
-//            response
+            // 요청/응답 로그
+            Log.d("RetrofitClient", "=== API 요청 URL === ${request.url}")
+            Log.d("RetrofitClient", "=== Status === ${response.code}")
+            response
         }
         .build()
 
+    private val retrofit: Retrofit = Retrofit.Builder()
+        .baseUrl(BASE_URL)
+        .client(client)
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
 
+    val apiService: ApiService by lazy { retrofit.create(ApiService::class.java) }
 
-    val apiService: ApiService by lazy {
-        Retrofit.Builder()
-            .baseUrl(BASE_URL)
-            .client(client)
-            .addConverterFactory(GsonConverterFactory.create(gson))
-            .build()
-            .create(ApiService::class.java)
+    // -------------------------------
+    // Refresh Token으로 새 Access Token 발급
+    private fun refreshAccessToken(refreshToken: String): String? = runBlocking {
+        try {
+            val response = apiService.refreshToken(RefreshRequest(refreshToken))
+            if (response.isSuccessful) {
+                response.body()?.data?.jwtToken
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
-
-    internal val retrofit: Retrofit by lazy {
-        Retrofit.Builder()
-            .baseUrl(BASE_URL)
-            .client(client)
-            .addConverterFactory(GsonConverterFactory.create(gson))
-            .build()
-    }
-
-    val api: ApiService by lazy { retrofit.create(ApiService::class.java) }
 }
