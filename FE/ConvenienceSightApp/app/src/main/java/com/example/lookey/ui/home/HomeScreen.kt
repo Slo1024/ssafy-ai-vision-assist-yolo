@@ -82,7 +82,7 @@ fun HomeScreen(
                         text = "LooKey",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary   // #004AD1 (AppColors.Main)
+                        color = MaterialTheme.colorScheme.onSurface   // #004AD1 (AppColors.Main)
                     )
                 }
 

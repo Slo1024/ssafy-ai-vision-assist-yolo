@@ -11,6 +11,7 @@ import com.example.lookey.ui.cart.CartRoute
 import com.example.lookey.ui.home.HomeScreen
 import com.example.lookey.ui.scan.ScanCameraScreen
 import com.example.lookey.ui.allergy.AllergyRoute
+import com.example.lookey.ui.settings.SettingsScreen
 
 @Composable
 fun AppNavGraph(
@@ -33,7 +34,7 @@ fun AppNavGraph(
                         restoreState = true
                     }
                 },
-                onSettings = { /* TODO */ },
+                onSettings = { navController.navigate(Routes.Settings) },
                 onGuide = { /* TODO: 사용법/가이드 화면 이동 */ },
             )
         }
@@ -60,7 +61,7 @@ fun AppNavGraph(
         composable(Routes.Allergy) {          // ★ 추가
             AllergyRoute()
         }
-
+        composable(Routes.Settings) { SettingsScreen() }
 
     }
 }

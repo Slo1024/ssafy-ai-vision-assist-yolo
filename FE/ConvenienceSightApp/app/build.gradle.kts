@@ -104,7 +104,8 @@ dependencies {
     implementation(libs.retrofit)                    // 그대로
     implementation(libs.okhttp.logging)              // -> implementation(libs.okhttp.logging) (자동완성에서 'okhttp-logging')
     implementation(libs.kotlinx.serialization.json)  // -> implementation(libs.kotlinx.serialization.json) ('kotlinx-serialization-json')
-
+// DataStore (설정값 저장용)
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
 // Hilt
 //    implementation(libs.hilt.android)                // -> implementation(libs.hilt.android) ('hilt-android')
 //    kapt(libs.hilt.compiler)                         // -> kapt(libs.hilt.compiler) ('hilt-compiler')

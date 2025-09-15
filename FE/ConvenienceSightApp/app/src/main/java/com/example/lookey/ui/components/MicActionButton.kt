@@ -41,14 +41,15 @@ fun MicActionButton(
         Image(
             painter = painterResource(R.drawable.ic_ellipse_for_mic),
             contentDescription = null, // 배경은 읽지 않음
-            modifier = Modifier.matchParentSize()
+            modifier = Modifier.matchParentSize(),
+            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
         )
         // 마이크 아이콘 (흰색)
         Image(
             painter = painterResource(R.drawable.ic_mic),
             contentDescription = null,
             colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onPrimary),
-            modifier = Modifier.size((sizeDp * 0.45f).dp)
+            modifier = Modifier.size((sizeDp * 0.6f).dp)
         )
     }
 }
