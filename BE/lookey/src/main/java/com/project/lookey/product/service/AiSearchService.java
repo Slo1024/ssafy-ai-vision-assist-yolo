@@ -2,6 +2,9 @@ package com.project.lookey.product.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.project.lookey.product.dto.ProductDirectionResponse;
+import com.project.lookey.product.entity.Product;
+import com.project.lookey.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,6 +22,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +31,7 @@ public class AiSearchService {
 
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
+    private final ProductRepository productRepository;
 
     @Value("${ai.search.url:http://localhost:8000}")
     private String aiServerUrl;
@@ -87,7 +92,7 @@ public class AiSearchService {
         }
     }
 
-    public String findProductDirection(MultipartFile currentFrame, String productName) {
+    public ProductDirectionResponse.Result findProductDirection(MultipartFile currentFrame, String productName) {
         try {
             MultipartBodyBuilder builder = new MultipartBodyBuilder();
 
@@ -113,12 +118,41 @@ public class AiSearchService {
                     .block();
 
             if (response != null) {
-                String directionBucket = (String) response.get("direction_bucket");
-                if (directionBucket != null && !directionBucket.isBlank()) {
-                    return directionBucket;
-                } else {
-                    log.warn("AI 서버에서 direction_bucket을 찾을 수 없습니다.");
+                String caseType = (String) response.get("case");
+                String output = (String) response.get("output");
+
+                if ("NotFound".equals(caseType)) {
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND, "현재 화면에서 해당 상품을 찾을 수 없습니다.");
+                }
+
+                if ("DIRECTION".equals(caseType)) {
+                    ProductDirectionResponse.Target target = new ProductDirectionResponse.Target(productName, output);
+                    return new ProductDirectionResponse.Result(caseType, target, null);
+                } else if ("SINGLE_RECOGNIZED".equals(caseType)) {
+                    // 상품 정보 조회
+                    Optional<Product> productOpt = findProductByName(output);
+                    if (productOpt.isPresent()) {
+                        Product product = productOpt.get();
+                        ProductDirectionResponse.Info info = new ProductDirectionResponse.Info(
+                                product.getName(),
+                                product.getPrice(),
+                                product.getEvent(),
+                                false // allergy 정보는 현재 Product 엔티티에 없으므로 기본값
+                        );
+                        return new ProductDirectionResponse.Result(caseType, null, info);
+                    } else {
+                        // 상품 정보를 찾을 수 없는 경우 기본 정보 반환
+                        ProductDirectionResponse.Info info = new ProductDirectionResponse.Info(
+                                output,
+                                null,
+                                null,
+                                false
+                        );
+                        return new ProductDirectionResponse.Result(caseType, null, info);
+                    }
+                } else {
+                    log.warn("알 수 없는 case type: {}", caseType);
+                    throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "AI 서버 응답 형식이 올바르지 않습니다.");
                 }
             } else {
                 log.warn("AI 서버에서 빈 응답을 받았습니다.");
@@ -141,5 +175,17 @@ public class AiSearchService {
             log.error("AI 서버 통신 중 예상치 못한 오류", e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "서비스 처리 중 오류가 발생했습니다.");
         }
+    }
+
+    private Optional<Product> findProductByName(String productName) {
+        // 상품명으로 검색 (정확한 매칭)
+        List<ProductRepository.NameView> products = productRepository.findNamesByKeyword(productName);
+
+        if (!products.isEmpty()) {
+            // 첫 번째 매칭 상품의 ID로 전체 정보 조회
+            return productRepository.findById(products.get(0).getId());
+        }
+
+        return Optional.empty();
     }
 }
