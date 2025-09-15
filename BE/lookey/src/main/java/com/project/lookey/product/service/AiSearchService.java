@@ -178,9 +178,14 @@ public class AiSearchService {
     }
 
     private Optional<Product> findProductByName(String productName) {
-        // 상품명으로 검색 (정확한 매칭)
-        List<ProductRepository.NameView> products = productRepository.findNamesByKeyword(productName);
+        // 먼저 정확한 상품명으로 조회
+        Optional<Product> exactMatch = productRepository.findByName(productName);
+        if (exactMatch.isPresent()) {
+            return exactMatch;
+        }
 
+        // 정확한 매칭이 없으면 부분 매칭으로 조회
+        List<ProductRepository.NameView> products = productRepository.findNamesByKeyword(productName);
         if (!products.isEmpty()) {
             // 첫 번째 매칭 상품의 ID로 전체 정보 조회
             return productRepository.findById(products.get(0).getId());

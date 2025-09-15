@@ -1,6 +1,7 @@
 package com.project.lookey.product.controller;
 
 import com.project.lookey.cart.service.CartService;
+import com.project.lookey.common.dto.ApiResponse;
 import com.project.lookey.product.dto.MatchCartResponse;
 import com.project.lookey.product.dto.ProductDirectionResponse;
 import com.project.lookey.product.service.AiSearchService;
@@ -69,7 +70,7 @@ public class ProductController {
     }
 
     @PostMapping("/search/location")
-    public ResponseEntity<?> findProductDirection(
+    public ResponseEntity<ApiResponse<ProductDirectionResponse.Result>> findProductDirection(
             @AuthenticationPrincipal(expression = "userId") Integer userId,
             @RequestParam("current_frame") MultipartFile currentFrame,
             @RequestParam("product_name") String productName
@@ -102,14 +103,6 @@ public class ProductController {
             message = "상품 검색 완료";
         }
 
-        return ResponseEntity.ok(Map.of(
-                "status", 200,
-                "message", message,
-                "result", Map.of(
-                        "case", result.caseType(),
-                        "target", result.target(),
-                        "info", result.info()
-                )
-        ));
+        return ResponseEntity.ok(new ApiResponse<>(200, message, result));
     }
 }
