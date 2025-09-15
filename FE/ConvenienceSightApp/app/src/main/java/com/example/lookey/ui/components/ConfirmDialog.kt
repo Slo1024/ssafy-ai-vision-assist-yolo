@@ -29,11 +29,38 @@ fun ConfirmDialog(
                     .widthIn(min = 260.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(message, style = MaterialTheme.typography.titleLarge, modifier = Modifier.fillMaxWidth())
+                Text(
+                    message,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Spacer(Modifier.height(20.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    TextButton(onClick = onConfirm) { Text(confirmText, style = MaterialTheme.typography.titleLarge) }
-                    TextButton(onClick = onDismiss) { Text(dismissText, style = MaterialTheme.typography.titleLarge) }
+                val actionColor = MaterialTheme.colorScheme.onSurface
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    TextButton(
+                        onClick = onConfirm, colors = ButtonDefaults.textButtonColors(
+                            contentColor = actionColor
+                        )
+                    ) {
+                        Text(
+                            confirmText,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    }
+                    TextButton(
+                        onClick = onDismiss, colors = ButtonDefaults.textButtonColors(
+                            contentColor = actionColor
+                        )
+                    ) {
+                        Text(
+                            dismissText,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    }
                 }
             }
         }
