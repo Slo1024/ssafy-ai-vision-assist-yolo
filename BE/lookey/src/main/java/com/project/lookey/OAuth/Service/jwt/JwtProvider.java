@@ -64,6 +64,7 @@ public class JwtProvider {
 
         return Jwts.builder()
                 .setSubject(userId.toString())
+                .claim("userId", userId)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(key, SignatureAlgorithm.HS512)
