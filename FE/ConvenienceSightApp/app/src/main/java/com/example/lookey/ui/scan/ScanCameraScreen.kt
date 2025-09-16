@@ -25,7 +25,6 @@ fun ScanCameraScreen(
 ) {
     val ui by vm.ui.collectAsState()
 
-    // 레이아웃 스펙
     val CAM_WIDTH = 320.dp
     val CAM_HEIGHT = 630.dp
     val CAM_TOP = 16.dp
@@ -35,18 +34,15 @@ fun ScanCameraScreen(
 
     val micCenterOffsetY = CAM_TOP + CAM_HEIGHT - (MIC_SIZE / 2).dp - MIC_RISE
 
-    // 기기 지원 배율(min/max) 보관
     var minZoom by remember { mutableStateOf(1.0f) }
     var maxZoom by remember { mutableStateOf(1.0f) }
 
-    // 우리가 요청하는 배율(스캔 중 0.5, 이외 1.0)
     val requestedZoom = remember(ui.mode, ui.scanning, ui.capturing) {
         if (ui.mode == Mode.SCAN && (ui.scanning || ui.capturing)) 0.5f else 1.0f
     }
-    // ✅ 기기가 0.6×만 지원하면 0.6으로 자동 보정
     val effectiveZoom = max(requestedZoom, minZoom)
 
-    // (옵션) 더미 인식 루프
+    // (선택) 더미 감지 루프 — 필요 없으면 제거
     LaunchedEffect(ui.mode, ui.scanning) {
         if (ui.mode == Mode.SCAN && ui.scanning) {
             while (isActive && ui.scanning) {
@@ -90,7 +86,6 @@ fun ScanCameraScreen(
                 Box(Modifier.align(Alignment.TopCenter)) {
                     BannerMessage(
                         banner = b,
-                        onDismiss = { vm.clearBanner() },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 20.dp)
@@ -98,25 +93,23 @@ fun ScanCameraScreen(
                 }
             }
 
-            // 장바구니 확인 모달
-            ui.cartTarget?.let { target ->
-                if (ui.showCartModal) {
-                    Box(Modifier.align(Alignment.TopCenter)) {
-                        ConfirmModal(
-                            text = "\"${target.name}\" 장바구니에서 제거할까요?",
-                            yesText = "예",
-                            noText = "아니요",
-                            onYes = vm::onCartRemoveConfirm,
-                            onNo = vm::onCartModalDismiss,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 20.dp)
-                        )
-                    }
+            // 장바구니 안내 여부 모달 (큐 기반)
+            if (ui.showCartGuideModal && ui.cartGuideTargetName != null) {
+                Box(Modifier.align(Alignment.TopCenter)) {
+                    ConfirmModal(
+                        text = "\"${ui.cartGuideTargetName}\" 장바구니에 있습니다. 안내할까요?",
+                        yesText = "예",
+                        noText = "아니요",
+                        onYes = vm::onCartGuideConfirm,
+                        onNo = vm::onCartGuideSkip,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 20.dp)
+                    )
                 }
             }
 
-            // FeaturePill
+            // FeaturePill — 스캔 중엔 항상 "상품 탐색 중"
             if (ui.mode == Mode.SCAN) {
                 Box(
                     modifier = Modifier
@@ -125,13 +118,10 @@ fun ScanCameraScreen(
                         .padding(bottom = PILL_BOTTOM_INSET),
                     contentAlignment = Alignment.Center
                 ) {
-                    val pillText =
-                        if (ui.capturing) "촬영 중..." else if (ui.scanning) "상품 탐색 중" else "상품 탐색 시작"
+                    val pillText = if (ui.scanning || ui.capturing) "상품 탐색 중" else "상품 탐색 시작"
                     FeaturePill(
                         text = pillText,
-                        onClick = {
-                            if (!ui.scanning && !ui.capturing) vm.startPanorama()
-                        },
+                        onClick = { if (!ui.scanning && !ui.capturing) vm.startPanorama() },
                         modifier = Modifier.width(CAM_WIDTH * 2 / 3)
                     )
                 }

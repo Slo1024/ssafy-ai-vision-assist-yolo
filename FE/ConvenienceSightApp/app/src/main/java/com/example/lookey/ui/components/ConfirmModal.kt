@@ -35,7 +35,7 @@ fun ConfirmModal(
 ) {
     val bg = MaterialTheme.colorScheme.secondary
     val fg = MaterialTheme.colorScheme.onSecondary
-    val shape = RoundedCornerShape(30.dp)
+    val shape = RoundedCornerShape(16.dp)
 
     Surface(
         color = bg,

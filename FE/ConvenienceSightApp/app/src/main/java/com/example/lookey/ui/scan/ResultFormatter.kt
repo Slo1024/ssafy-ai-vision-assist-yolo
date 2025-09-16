@@ -15,37 +15,27 @@ object ResultFormatter {
     private fun formatPrice(price: Int?): String =
         if (price == null) "" else NumberFormat.getNumberInstance(Locale.KOREA).format(price)
 
-    /**
-     * 배너: 상품 정보 한 번에
-     * 예)
-     *  먹태깡 청양마요 맛 | 1,700원
-     *  2+1 행사품입니다.
-     *  (알레르기 시)
-     *  주의: 유당 포함
-     */
+    // ⬇️ 한 줄: "이름 | 1,700원 | 2+1 행사품입니다."
+    // 알레르기 있으면 2줄: (한 줄) + "\n주의: ..."
     fun toBanner(r: DetectResult): Banner {
-        val head = buildString {
-            append(r.name)
-            r.price?.let { append(" | ${formatPrice(it)}원") }
+        val parts = buildList {
+            add(r.name)
+            r.price?.let { add("${formatPrice(it)}원") }
+            r.promo?.let { add("${it} 행사품입니다.") }
         }
+        val line1 = parts.joinToString(" | ")
 
-        val lines = mutableListOf(head)
-
-        // 행사 문구
-        r.promo?.let { lines += "${it} 행사품입니다." }
-
-        // 주의 성분(있을 경우 경고 배너로 승격)
         val hasWarn = r.hasAllergy
-        if (hasWarn) {
-            lines += "주의: ${r.allergyNote ?: "알레르기 성분"} 포함"
+        val text = if (hasWarn) {
+            line1 + "\n주의: ${r.allergyNote ?: "알레르기 성분"} 포함"
+        } else {
+            line1
         }
 
-        val text = lines.joinToString("\n")
         val type = if (hasWarn) Banner.Type.WARNING else Banner.Type.INFO
         return Banner(type, text)
     }
 
-    /** 음성: 기존 로직 유지 (원하면 동일하게 한 줄로 합쳐 읽도록 커스터마이즈 가능) */
     fun toVoice(r: DetectResult): Voice {
         val priceText = r.price?.let { "가격은 ${formatPrice(it)}원" } ?: ""
         val promoText = r.promo?.let { ", 행사 ${it}" } ?: ""
@@ -53,7 +43,6 @@ object ResultFormatter {
         return Voice("${r.name}를 찾았습니다. $priceText$promoText$warnText.")
     }
 
-    /** 장바구니 케이스(있다면 계속 사용 가능) */
     fun toCartBanner(r: DetectResult, inCart: Boolean): Banner {
         val base = toBanner(r)
         val text = if (inCart) base.text + "\n장바구니에 담긴 상품입니다. 제거할까요?" else base.text
