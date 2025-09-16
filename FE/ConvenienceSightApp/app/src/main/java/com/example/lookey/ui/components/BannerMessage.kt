@@ -14,8 +14,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.lookey.ui.scan.ResultFormatter
+import com.example.lookey.ui.theme.LooKeyTheme
 
 @Composable
 fun BannerMessage(
@@ -51,3 +53,36 @@ fun BannerMessage(
         }
     }
 }
+
+
+
+
+@Preview(showBackground = true)
+@Composable
+private fun Preview_Banner_Info() {
+    LooKeyTheme {
+        BannerMessage(
+            banner = ResultFormatter.Banner(
+                type = ResultFormatter.Banner.Type.INFO,
+                text = "코카콜라 제로 500ml | 2,200원\n1+1 행사품입니다."
+            ),
+//            onDismiss = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun Preview_Banner_Warning() {
+    LooKeyTheme {
+        BannerMessage(
+            banner = ResultFormatter.Banner(
+                type = ResultFormatter.Banner.Type.WARNING,
+                text = "우유 200ml | 1,200원\n주의: 유당 포함"
+            ),
+//            onDismiss = {}
+        )
+    }
+}
+
+
