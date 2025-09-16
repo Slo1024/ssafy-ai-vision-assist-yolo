@@ -172,16 +172,21 @@ public class PyonyCrawler {
         
         // 1. 회사명 제거 (농심), 롯데) 등)
         cleaned = cleaned.replaceAll("^[^)]+\\)\\s*", "");
+
+        // 2. 연속된 공백 정리
+        // cleaned = cleaned.replaceAll("\\s{2,}", " ").trim();
+        cleaned = cleaned.replaceAll("\\s+", "");
         
-        // 2. ml, l을 ML, L로 대문자 변환 (대소문자 구분 없이)
+        // 3. ml, l을 ML, L로 대문자 변환 (대소문자 구분 없이)
         cleaned = cleaned.replaceAll("(?i)ml", "ML");
         cleaned = cleaned.replaceAll("(?i)l(?![a-zA-Z])", "L");
         
-        // 3. 용량 뒤 불필요한 문자 제거 (캔, 병, 페트 등)
+        // 4. 용량 뒤 불필요한 문자 제거 (캔, 병, 페트 등)
         cleaned = cleaned.replaceAll("(\\d+)(ML|L)[가-힣]*.*?$", "$1$2");
         
-        // 4. 연속된 공백 정리
-        cleaned = cleaned.replaceAll("\\s{2,}", " ").trim();
+        // 5. 용량 앞 공백 강제 삽입
+        //    ...문자/숫자/괄호) + [숫자] + (ML|L)  → 중간에 공백 넣기
+        cleaned = cleaned.replaceAll("(\\d{2,4})(ML|L)\\b", " $1$2");
         
         return cleaned;
     }

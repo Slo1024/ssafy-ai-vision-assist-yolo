@@ -60,7 +60,7 @@ public class ProductController {
         List<String> matchedNames = aiSearchService.findMatchedProducts(shelfImages, cartProductNames);
 
         // 응답 생성
-        MatchCartResponse.Result result = new MatchCartResponse.Result(matchedNames);
+        MatchCartResponse.Result result = new MatchCartResponse.Result(matchedNames.size(), matchedNames);
         
         return ResponseEntity.ok(Map.of(
                 "status", 200,

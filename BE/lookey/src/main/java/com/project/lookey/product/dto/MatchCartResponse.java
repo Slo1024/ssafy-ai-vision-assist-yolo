@@ -8,6 +8,7 @@ public record MatchCartResponse(
         Result result
 ) {
     public record Result(
+            int count,
             List<String> matched_names
     ) {}
 }
