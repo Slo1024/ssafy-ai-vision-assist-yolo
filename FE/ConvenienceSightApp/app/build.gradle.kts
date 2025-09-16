@@ -41,15 +41,18 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
     kotlinOptions {
         jvmTarget = "17"
     }
+
 
     buildFeatures {
         compose = true
         buildConfig = true   // BuildConfig 활성화
     }
 }
+
 
 dependencies {
 
@@ -93,6 +96,8 @@ dependencies {
     implementation(libs.androidx.camera.camera2)     // -> implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.lifecycle)   // -> implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)        // -> implementation(libs.androidx.camera.view)
+
+
 
 // Location / Maps
     implementation(libs.play.services.location)      // -> implementation(libs.play.services.location)  (자동완성에서 'play-services-location')
