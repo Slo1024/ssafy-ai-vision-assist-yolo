@@ -13,6 +13,7 @@ import com.example.lookey.ui.home.HomeScreen
 import com.example.lookey.ui.scan.ScanCameraScreen
 import com.example.lookey.ui.allergy.AllergyRoute
 import com.example.lookey.ui.settings.SettingsScreen
+import com.example.lookey.ui.dev.DevComponentsScreen
 import com.example.lookey.util.PrefUtil
 
 @Composable
@@ -67,6 +68,11 @@ fun AppNavGraph(
             AllergyRoute()
         }
         composable(Routes.Settings) { SettingsScreen() }
+
+
+        if (BuildConfig.DEBUG) {
+            composable(Routes.Dev) { DevComponentsScreen() }
+        }
 
     }
 }
