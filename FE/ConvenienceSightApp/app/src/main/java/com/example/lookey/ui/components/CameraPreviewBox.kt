@@ -2,6 +2,7 @@ package com.example.lookey.ui.components
 
 import android.Manifest
 import android.util.Log
+import android.view.View
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.AspectRatio
@@ -21,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -41,7 +43,7 @@ fun CameraPreviewBox(
     corner: Dp = 12.dp,
     cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA,
     zoomRatio: Float = 1.0f,
-    onZoomCapabilities: ((minZoom: Float, maxZoom: Float) -> Unit)? = null,  // ✅ 추가
+    onZoomCapabilities: ((minZoom: Float, maxZoom: Float) -> Unit)? = null,
     modifier: Modifier = Modifier,
     overlay: @Composable (BoxScope.() -> Unit) = {}
 ) {
@@ -50,32 +52,35 @@ fun CameraPreviewBox(
 
     var hasPermission by remember { mutableStateOf(false) }
 
-    // Preview
     val preview = remember {
         Preview.Builder()
             .setTargetAspectRatio(AspectRatio.RATIO_4_3)
             .build()
     }
+    // ✅ 이 previewView를 setSurfaceProvider에도, 화면에도 '같은 객체'로 씁니다.
     val previewView = remember {
         PreviewView(ctx).apply {
             setBackgroundColor(android.graphics.Color.TRANSPARENT)
             scaleType = PreviewView.ScaleType.FILL_CENTER
             implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+
+            // 접근성 제외
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            contentDescription = ""
+            isFocusable = false
+            isClickable = false
         }
     }
 
     var camera by remember { mutableStateOf<androidx.camera.core.Camera?>(null) }
 
-    // 권한 요청
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { res -> hasPermission = (res[Manifest.permission.CAMERA] == true) }
 
-    LaunchedEffect(Unit) {
-        launcher.launch(arrayOf(Manifest.permission.CAMERA))
-    }
+    LaunchedEffect(Unit) { launcher.launch(arrayOf(Manifest.permission.CAMERA)) }
 
-    // CameraX 바인딩 (selector 바뀌면 재바인드)
+    // CameraX 바인딩
     LaunchedEffect(hasPermission, cameraSelector) {
         if (!hasPermission) return@LaunchedEffect
         val future = ProcessCameraProvider.getInstance(ctx)
@@ -83,14 +88,10 @@ fun CameraPreviewBox(
             val provider = future.get()
             try {
                 provider.unbindAll()
+                // ✅ 화면에 쓰는 '그 previewView'에 SurfaceProvider 설정
                 preview.setSurfaceProvider(previewView.surfaceProvider)
-                // 반환된 Camera 저장 → 이후 줌 적용 가능
-                camera = provider.bindToLifecycle(
-                    lifecycleOwner,
-                    cameraSelector,
-                    preview
-                )
-                // 바인딩 직후 지원 배율 한 번 알려주기
+                camera = provider.bindToLifecycle(lifecycleOwner, cameraSelector, preview)
+
                 camera?.cameraInfo?.zoomState?.value?.let { zs ->
                     onZoomCapabilities?.invoke(zs.minZoomRatio, zs.maxZoomRatio)
                 }
@@ -100,23 +101,20 @@ fun CameraPreviewBox(
         }, ContextCompat.getMainExecutor(ctx))
     }
 
-    // 줌 적용 + 지원 범위 갱신
+    // 줌 반영
     LaunchedEffect(zoomRatio, camera) {
         camera?.cameraInfo?.zoomState?.value?.let { state ->
             val clamped = zoomRatio.coerceIn(state.minZoomRatio, state.maxZoomRatio)
             camera?.cameraControl?.setZoomRatio(clamped)
-            // 매 변경 시 현재 지원 범위 알려주기(선택)
             onZoomCapabilities?.invoke(state.minZoomRatio, state.maxZoomRatio)
         }
     }
 
-    // 언바인드 정리
     DisposableEffect(Unit) {
         val future = ProcessCameraProvider.getInstance(ctx)
         onDispose { runCatching { future.get().unbindAll() } }
     }
 
-    // 레이아웃
     Box(
         modifier = modifier
             .width(width)
@@ -125,7 +123,12 @@ fun CameraPreviewBox(
             .clip(RoundedCornerShape(corner)),
         contentAlignment = Alignment.Center
     ) {
-        AndroidView(factory = { previewView }, modifier = Modifier.matchParentSize())
+        // ✅ 여기서도 같은 previewView를 반환
+        AndroidView(
+            modifier = Modifier.matchParentSize(),
+            factory = { previewView }
+        )
+
         GridOverlay(Modifier.matchParentSize())
         overlay()
     }
