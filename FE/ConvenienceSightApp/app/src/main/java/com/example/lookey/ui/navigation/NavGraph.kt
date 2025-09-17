@@ -15,6 +15,7 @@ import com.example.lookey.ui.home.HomeScreen
 import com.example.lookey.ui.scan.ScanCameraScreen
 import com.example.lookey.ui.allergy.AllergyRoute
 import com.example.lookey.ui.settings.SettingsScreen
+import com.example.lookey.ui.storemap.DummyStoreListPage
 import com.example.lookey.ui.dev.DevComponentsScreen
 import com.example.lookey.util.PrefUtil
 
@@ -32,10 +33,17 @@ fun AppNavGraph(
             HomeScreen(
                 tts = tts,
                 userNameState = userNameState,
-                onCart = { navController.navigate(Routes.Cart) },
-                onFindProduct = { navController.navigate(Routes.Scan.Camera) },
-                onAllergy = { navController.navigate(Routes.Allergy) },
-                onSettings = { navController.navigate(Routes.Settings) }
+                onCart = { navController.navigate(Routes.Cart) }, // 필요한 파라미터에 맞게 호출
+                onFindStore = { navController.navigate(Routes.DummyStores) },
+                onFindProduct = { navController.navigate(Routes.Scan.Camera) }, // ← 여기!
+                onAllergy = {                             // ★ 알레르기 화면 이동
+                    navController.navigate(Routes.Allergy) {
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onSettings = { navController.navigate(Routes.Settings) },
+                onGuide = { /* TODO: 사용법/가이드 화면 이동 */ },
             )
         }
 
@@ -51,6 +59,28 @@ fun AppNavGraph(
             )
         }
 
-        // 다른 composable 생략...
+        composable(Routes.Cart) {
+            CartRoute()
+        }
+
+        composable(Routes.Scan.Camera) {
+            ScanCameraScreen(
+                back = { navController.popBackStack() },
+
+            )
+        }
+        composable(Routes.Allergy) {          // ★ 추가
+            AllergyRoute()
+        }
+        composable(Routes.Settings) { SettingsScreen() }
+        composable(Routes.DummyStores) {
+            DummyStoreListPage()
+        }
+
+
+
+        if (BuildConfig.DEBUG) {
+            composable(Routes.Dev) { DevComponentsScreen() }
+        }
     }
 }
