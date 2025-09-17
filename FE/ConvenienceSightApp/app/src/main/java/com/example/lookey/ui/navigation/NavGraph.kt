@@ -1,6 +1,7 @@
 package com.example.lookey.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -12,6 +13,7 @@ import com.example.lookey.ui.home.HomeScreen
 import com.example.lookey.ui.scan.ScanCameraScreen
 import com.example.lookey.ui.allergy.AllergyRoute
 import com.example.lookey.ui.settings.SettingsScreen
+import com.example.lookey.util.PrefUtil
 
 @Composable
 fun AppNavGraph(
@@ -23,8 +25,11 @@ fun AppNavGraph(
         startDestination = if (BuildConfig.USE_AUTH) Routes.Login else Routes.Home // ★ 토글 한 줄
     ) {
         composable(Routes.Home) {
+            val context = LocalContext.current
+            val userName = PrefUtil.getUserName(context) ?: "사용자"
             HomeScreen(
                 tts = tts,
+                userName = userName,
                 onCart = { navController.navigate(Routes.Cart) }, // 필요한 파라미터에 맞게 호출
                 onFindStore = { /* TODO: 외부 지도 또는 매장 리스트로 이동 */ },
                 onFindProduct = { navController.navigate(Routes.Scan.Camera) }, // ← 여기!

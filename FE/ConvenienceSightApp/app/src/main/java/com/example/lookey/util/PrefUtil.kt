@@ -9,6 +9,7 @@ object PrefUtil {
     private const val KEY_JWT = "jwt_token"
     private const val KEY_REFRESH = "refresh_token"
     private const val KEY_USER_ID = "user_id"
+    private const val KEY_USER_NAME = "user_name"
 
     // EncryptedSharedPreferences 초기화
     private fun getPrefs(context: Context) = EncryptedSharedPreferences.create(
@@ -48,6 +49,16 @@ object PrefUtil {
     fun getRefreshToken(context: Context): String? {
         val prefs = getPrefs(context)
         return prefs.getString(KEY_REFRESH, null)
+    }
+
+    fun saveUserName(context: Context, userName: String) {
+        val prefs = getPrefs(context)
+        prefs.edit().putString(KEY_USER_NAME, userName).apply()
+    }
+
+    fun getUserName(context: Context): String? {
+        val prefs = getPrefs(context)
+        return prefs.getString(KEY_USER_NAME, null)
     }
 
     fun clear(context: Context) {
