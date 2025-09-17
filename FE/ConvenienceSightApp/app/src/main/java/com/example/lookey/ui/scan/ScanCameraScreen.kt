@@ -167,19 +167,19 @@ fun ScanCameraScreen(
                 }
             }
 
-            // 디버그 패널 (TalkBack 켜지면 숨김)
-            if (BuildConfig.DEBUG) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(8.dp)
-                ) {
-                    DebugPanel(
-                        onShowBanner = { scanVm.debugShowBannerSample() },
-                        onShowModal  = { scanVm.debugShowCartGuideModalSample() }
-                    )
-                }
-            }
+//            // 디버그 패널 (TalkBack 켜지면 숨김)
+//            if (BuildConfig.DEBUG) {
+//                Box(
+//                    modifier = Modifier
+//                        .align(Alignment.Center)
+//                        .padding(8.dp)
+//                ) {
+//                    DebugPanel(
+//                        onShowBanner = { scanVm.debugShowBannerSample() },
+//                        onShowModal  = { scanVm.debugShowCartGuideModalSample() }
+//                    )
+//                }
+//            }
 
             // FeaturePill — 스캔 중엔 “상품 탐색 중”
             if (ui.mode == Mode.SCAN) {
