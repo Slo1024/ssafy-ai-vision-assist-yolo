@@ -140,7 +140,7 @@ fun ScanCameraScreen(
                         banner = b,
                         modifier = Modifier
                             .width(CAM_WIDTH)
-                            .padding(horizontal = 16.dp, vertical = 20.dp)
+                            .padding(vertical = 20.dp)
                             .focusRequester(bannerFocus)
                             .focusTarget() // focusable 대신
                             .semantics { liveRegion = LiveRegionMode.Assertive }
@@ -159,7 +159,7 @@ fun ScanCameraScreen(
                         onNo  = scanVm::onCartGuideSkip,
                         modifier = Modifier
                             .width(CAM_WIDTH)
-                            .padding(horizontal = 16.dp, vertical = 20.dp)
+                            .padding(vertical = 20.dp)
                             .focusRequester(modalFocus)
                             .focusTarget()
                             .semantics { liveRegion = LiveRegionMode.Assertive }
@@ -168,7 +168,7 @@ fun ScanCameraScreen(
             }
 
             // 디버그 패널 (TalkBack 켜지면 숨김)
-            if (BuildConfig.DEBUG && !screenReaderOn) {
+            if (BuildConfig.DEBUG) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.Center)
