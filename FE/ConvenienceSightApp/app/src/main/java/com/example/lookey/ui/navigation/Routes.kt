@@ -14,5 +14,6 @@ object Routes {
     const val Search = "search"
     const val Safety = "safety"
     const val Settings = "settings"
+    const val DummyStores = "dummyStores"
     const val Dev = "dev"
 }
