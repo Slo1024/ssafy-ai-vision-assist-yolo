@@ -13,6 +13,7 @@ import com.example.lookey.ui.home.HomeScreen
 import com.example.lookey.ui.scan.ScanCameraScreen
 import com.example.lookey.ui.allergy.AllergyRoute
 import com.example.lookey.ui.settings.SettingsScreen
+import com.example.lookey.ui.storemap.DummyStoreListPage
 import com.example.lookey.util.PrefUtil
 
 @Composable
@@ -31,7 +32,7 @@ fun AppNavGraph(
                 tts = tts,
                 userName = userName,
                 onCart = { navController.navigate(Routes.Cart) }, // 필요한 파라미터에 맞게 호출
-                onFindStore = { /* TODO: 외부 지도 또는 매장 리스트로 이동 */ },
+                onFindStore = { navController.navigate(Routes.DummyStores) },
                 onFindProduct = { navController.navigate(Routes.Scan.Camera) }, // ← 여기!
                 onAllergy = {                             // ★ 알레르기 화면 이동
                     navController.navigate(Routes.Allergy) {
@@ -67,6 +68,10 @@ fun AppNavGraph(
             AllergyRoute()
         }
         composable(Routes.Settings) { SettingsScreen() }
+        composable(Routes.DummyStores) {
+            DummyStoreListPage()
+        }
+
 
     }
 }
