@@ -32,6 +32,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/test/**").permitAll() // 테스트 API는 인증 없이 허용
                         .requestMatchers("/actuator/**").permitAll() // Actuator endpoints 허용
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll() // Swagger 허용
+                        .requestMatchers("/api/product-allergy/update").permitAll()
                         .requestMatchers("/api/**").authenticated() // 나머지 API는 인증 필요
                         .anyRequest().permitAll()
                 )
