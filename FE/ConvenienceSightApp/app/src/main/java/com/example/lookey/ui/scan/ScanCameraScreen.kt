@@ -1,19 +1,34 @@
+// app/src/main/java/com/example/lookey/ui/scan/ScanCameraScreen.kt
 package com.example.lookey.ui.scan
 
+import android.view.accessibility.AccessibilityManager
 import androidx.camera.core.CameraSelector
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.consumeAllChanges
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.lookey.BuildConfig              // ★ 추가
+import com.example.lookey.BuildConfig
 import com.example.lookey.core.platform.tts.TtsController
 import com.example.lookey.ui.cart.CartPortFromViewModel
 import com.example.lookey.ui.components.*
@@ -21,23 +36,10 @@ import com.example.lookey.ui.viewmodel.CartViewModel
 import com.example.lookey.ui.viewmodel.ScanViewModel
 import com.example.lookey.ui.viewmodel.ScanViewModel.Mode
 import kotlin.math.max
-
-
-
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.ui.input.pointer.PointerInputChange
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.consumeAllChanges
-import androidx.compose.ui.unit.IntOffset
 import kotlin.math.roundToInt
-
-
-
-
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusTarget
 
 @Composable
 fun ScanCameraScreen(
@@ -48,24 +50,54 @@ fun ScanCameraScreen(
     val tts = remember { TtsController(context) }
     DisposableEffect(Unit) { onDispose { tts.shutdown() } }
 
-    // ----- Cart 포트 준비 -----
+    // ----- 접근성 상태 -----
+    val view = LocalView.current
+    val am = context.getSystemService(AccessibilityManager::class.java)
+    val screenReaderOn = remember(am) {
+        (am?.isEnabled == true) && (am?.isTouchExplorationEnabled == true)
+    }
+
+    // ----- Cart 포트 -----
     val cartVm: CartViewModel = viewModel()
     val cartPort = remember(cartVm) { CartPortFromViewModel(cartVm) }
 
-    // ----- ScanViewModel: Factory로 의존성 주입 -----
+    // ----- ScanViewModel DI -----
     val scanVm: ScanViewModel = viewModel(factory = object : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            // TalkBack 켜져 있으면 앱 TTS는 비활성(충돌 방지)
+            val safeSpeak: (String) -> Unit =
+                if (screenReaderOn) ({ _ -> })
+                else tts::speak
+
             return ScanViewModel(
-                speak = tts::speak,
+                speak = safeSpeak,
                 cart = cartPort
             ) as T
         }
     })
-
     val ui by scanVm.ui.collectAsState()
 
-    // 레이아웃 스펙
+    // ----- 포커스 요청자 (배너/모달) -----
+    val bannerFocus = remember { FocusRequester() }
+    val modalFocus  = remember { FocusRequester() }
+
+    // 배너/모달 등장 시 자동 낭독
+    LaunchedEffect(ui.banner?.text) {
+        ui.banner?.text?.let { text ->
+            bannerFocus.requestFocus()
+            view.announceForAccessibility(text)
+        }
+    }
+    LaunchedEffect(ui.showCartGuideModal, ui.cartGuideTargetName) {
+        if (ui.showCartGuideModal && ui.cartGuideTargetName != null) {
+            val msg = "\"${ui.cartGuideTargetName}\" 장바구니에 있습니다. 이걸로 안내할까요?"
+            modalFocus.requestFocus()
+            view.announceForAccessibility(msg)
+        }
+    }
+
+    // ----- 레이아웃 스펙 -----
     val CAM_WIDTH = 320.dp
     val CAM_HEIGHT = 630.dp
     val CAM_TOP = 16.dp
@@ -77,7 +109,6 @@ fun ScanCameraScreen(
     // 줌 capability
     var minZoom by remember { mutableStateOf(1.0f) }
     var maxZoom by remember { mutableStateOf(1.0f) }
-
     val requestedZoom = remember(ui.mode, ui.scanning, ui.capturing) {
         if (ui.mode == Mode.SCAN && (ui.scanning || ui.capturing)) 0.5f else 1.0f
     }
@@ -86,7 +117,7 @@ fun ScanCameraScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.systemBars)
     ) {
         CameraPreviewBox(
@@ -102,19 +133,22 @@ fun ScanCameraScreen(
             },
             modifier = Modifier.align(Alignment.TopCenter)
         ) {
-            // 상단 배너
+            // 배너
             ui.banner?.let { b ->
                 Box(Modifier.align(Alignment.TopCenter)) {
                     BannerMessage(
                         banner = b,
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .width(CAM_WIDTH)
                             .padding(horizontal = 16.dp, vertical = 20.dp)
+                            .focusRequester(bannerFocus)
+                            .focusTarget() // focusable 대신
+                            .semantics { liveRegion = LiveRegionMode.Assertive }
                     )
                 }
             }
 
-            // 장바구니 안내 여부 모달
+            // 장바구니 안내 모달
             if (ui.showCartGuideModal && ui.cartGuideTargetName != null) {
                 Box(Modifier.align(Alignment.TopCenter)) {
                     ConfirmModal(
@@ -122,16 +156,19 @@ fun ScanCameraScreen(
                         yesText = "예",
                         noText = "아니요",
                         onYes = scanVm::onCartGuideConfirm,
-                        onNo = scanVm::onCartGuideSkip,
+                        onNo  = scanVm::onCartGuideSkip,
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .width(CAM_WIDTH)
                             .padding(horizontal = 16.dp, vertical = 20.dp)
+                            .focusRequester(modalFocus)
+                            .focusTarget()
+                            .semantics { liveRegion = LiveRegionMode.Assertive }
                     )
                 }
             }
 
-            // ★ 디버그 전용 미니 패널: 배너/모달 강제 표시
-            if (BuildConfig.DEBUG) {
+            // 디버그 패널 (TalkBack 켜지면 숨김)
+            if (BuildConfig.DEBUG && !screenReaderOn) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.Center)
@@ -189,16 +226,12 @@ fun ScanCameraScreen(
     }
 }
 
-
-
-// Compose 1.6+ 에서는 change.consume(), 1.5.x 에서는 consumeAllChanges().
+// Compose 1.6+에서는 change.consume(), 1.5.x에선 consumeAllChanges()
 // 둘 다 커버하는 작은 호환 함수
 private fun PointerInputChange.consumePositionCompat() {
     try {
-        // 1.6+
         this.consume()
     } catch (_: Throwable) {
-        // 1.5.x
         this.consumeAllChanges()
     }
 }

@@ -2,6 +2,7 @@
 package com.example.lookey.ui.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -19,6 +20,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.lookey.ui.theme.LooKeyTheme
+// TalkBack 관련 imports 추가
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusTarget
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.paneTitle
+import androidx.compose.ui.semantics.liveRegion
+
 
 @Composable
 fun ConfirmModal(
@@ -32,6 +44,17 @@ fun ConfirmModal(
     val bg = MaterialTheme.colorScheme.secondary
     val fg = MaterialTheme.colorScheme.onSecondary
 
+    // ⬇️ TalkBack 공지 + 포커스 이동
+    val view = LocalView.current
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(text) {
+        // 모달이 뜨면 즉시 읽어줌
+        view.announceForAccessibility(text)
+        // 모달 컨테이너에 포커스 이동
+        focusRequester.requestFocus()
+    }
+
+
     Surface(
         color = bg,
         contentColor = fg,
@@ -39,7 +62,14 @@ fun ConfirmModal(
         tonalElevation = 0.dp,
         modifier = modifier
             .fillMaxWidth()
-            .semantics { contentDescription = text }
+            .focusRequester(focusRequester)   // ⬅️ 포커스 받을 수 있게
+            .focusable()                      // ⬅️ 접근성 포커스 타깃화
+            .semantics {
+                // 대화상자 성격을 알려주고 즉시 읽게 설정
+                paneTitle = "확인"
+                liveRegion = LiveRegionMode.Assertive
+                contentDescription = text
+            }
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
