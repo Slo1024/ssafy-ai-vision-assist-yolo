@@ -51,14 +51,14 @@ object PrefUtil {
         return prefs.getString(KEY_REFRESH, null)
     }
 
-    fun saveUserName(context: Context, userName: String) {
-        val prefs = getPrefs(context)
-        prefs.edit().putString(KEY_USER_NAME, userName).apply()
+    fun saveUserName(context: Context, userName: String?) {
+        val prefs = getPrefs(context)   // applicationContext로 통일
+        prefs.edit().putString(KEY_USER_NAME, userName ?: "사용자").apply()
     }
 
-    fun getUserName(context: Context): String? {
-        val prefs = getPrefs(context)
-        return prefs.getString(KEY_USER_NAME, null)
+    fun getUserName(context: Context): String {
+        val prefs = getPrefs(context)   // applicationContext로 통일
+        return prefs.getString(KEY_USER_NAME, "사용자") ?: "사용자"
     }
 
     fun clear(context: Context) {

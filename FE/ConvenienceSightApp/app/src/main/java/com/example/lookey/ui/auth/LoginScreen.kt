@@ -59,8 +59,9 @@ fun LoginScreen(
             Log.d("GoogleLogin", "idToken: $idToken")
 
             if (!idToken.isNullOrEmpty()) {
-                tts.speak("${account.displayName ?: "사용자"}님, 로그인되었습니다.")
-                sendIdTokenToServer(context, idToken, onSignedIn)
+                val displayName = account.displayName ?: "사용자"
+                tts.speak("$displayName 님, 로그인되었습니다.")
+                sendIdTokenToServer(context, idToken, displayName, onSignedIn)
             } else {
                 tts.speak("idToken을 가져오지 못했습니다.")
             }
@@ -139,27 +140,45 @@ fun LoginScreen(
 private fun sendIdTokenToServer(
     context: Context,
     idToken: String,
+    displayName: String,
     onSignedIn: () -> Unit
 ) {
     CoroutineScope(Dispatchers.IO).launch {
         try {
             val response = RetrofitClient.apiService.googleLogin("Bearer $idToken")
+
+            Log.d("LoginScreen", "Server Response code=${response.code()}, message=${response.message()}")
+            Log.d("LoginScreen", "Response body=${response.body()}")
+
             if (response.isSuccessful) {
                 val data = response.body()?.data
+
+                Log.d("LoginScreen", "server data: $data")
+                Log.d("LoginScreen", "server userName: ${data?.userName}")
+
                 val jwt = data?.jwtToken
                 val userId = data?.userId
                 val userName = data?.userName
+                val serverName = data?.userName
+
+                // 서버가 userName을 안 보내면 Google 계정 이름 사용
+                val finalName = serverName ?: displayName
 
                 if (!jwt.isNullOrEmpty() && userId != null) {
+                    val appContext = context.applicationContext
                     TokenProvider.token = jwt
-                    PrefUtil.saveUserId(context, userId.toString())
-                    PrefUtil.saveUserName(context, userName ?: "?")   // ← 여기를 추가
-                    PrefUtil.saveJwtToken(context, jwt)
+                    PrefUtil.saveUserId(appContext, userId.toString())
+                    PrefUtil.saveUserName(appContext, finalName)   // null이면 PrefUtil에서 "사용자"로 처리됨
+                    PrefUtil.saveJwtToken(appContext, jwt)
+
+                    //Log.d("LoginScreen", "Saved userName=${PrefUtil.getUserName(context)}")
+
 
                     CoroutineScope(Dispatchers.Main).launch {
                         onSignedIn()
                     }
-                } else {
+                }
+                else {
                     Log.e("LoginScreen", "JWT 또는 userId가 비어있습니다.")
                 }
             } else {

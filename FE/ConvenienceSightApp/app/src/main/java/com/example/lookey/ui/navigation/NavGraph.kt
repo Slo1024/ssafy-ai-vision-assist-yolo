@@ -1,5 +1,6 @@
 package com.example.lookey.ui.navigation
 
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
@@ -26,7 +27,8 @@ fun AppNavGraph(
     ) {
         composable(Routes.Home) {
             val context = LocalContext.current
-            val userName = PrefUtil.getUserName(context) ?: "사용자"
+            val userName = PrefUtil.getUserName(context)
+
             HomeScreen(
                 tts = tts,
                 userName = userName,
