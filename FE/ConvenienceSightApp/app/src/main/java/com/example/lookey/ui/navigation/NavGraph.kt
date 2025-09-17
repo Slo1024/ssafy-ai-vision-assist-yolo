@@ -1,6 +1,8 @@
 package com.example.lookey.ui.navigation
 
+import android.util.Log
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -20,18 +22,17 @@ import com.example.lookey.util.PrefUtil
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
-    tts: TtsController
+    tts: TtsController,
+    userNameState: MutableState<String> // ← 추가
 ) {
     NavHost(
         navController = navController,
-        startDestination = if (BuildConfig.USE_AUTH) Routes.Login else Routes.Home // ★ 토글 한 줄
+        startDestination = if (BuildConfig.USE_AUTH) Routes.Login else Routes.Home
     ) {
         composable(Routes.Home) {
-            val context = LocalContext.current
-            val userName = PrefUtil.getUserName(context) ?: "사용자"
             HomeScreen(
                 tts = tts,
-                userName = userName,
+                userNameState = userNameState,
                 onCart = { navController.navigate(Routes.Cart) }, // 필요한 파라미터에 맞게 호출
                 onFindStore = { navController.navigate(Routes.DummyStores) },
                 onFindProduct = { navController.navigate(Routes.Scan.Camera) }, // ← 여기!
@@ -45,6 +46,7 @@ fun AppNavGraph(
                 onGuide = { /* TODO: 사용법/가이드 화면 이동 */ },
             )
         }
+
         composable(Routes.Login) {
             LoginScreen(
                 onSignedIn = {
@@ -52,9 +54,11 @@ fun AppNavGraph(
                         popUpTo(Routes.Login) { inclusive = true }
                     }
                 },
-                tts = tts
+                tts = tts,
+                userNameState = userNameState
             )
         }
+
         composable(Routes.Cart) {
             CartRoute()
         }
@@ -78,6 +82,5 @@ fun AppNavGraph(
         if (BuildConfig.DEBUG) {
             composable(Routes.Dev) { DevComponentsScreen() }
         }
-
     }
 }
