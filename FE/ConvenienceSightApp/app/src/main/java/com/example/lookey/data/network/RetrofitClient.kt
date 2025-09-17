@@ -15,7 +15,8 @@ import com.example.lookey.util.PrefUtil
 import kotlinx.coroutines.runBlocking
 
 object RetrofitClient {
-    private const val BASE_URL = "https://j13e101.p.ssafy.io/dev/" // 실제 API 주소로 교체
+    //private const val BASE_URL = "https://j13e101.p.ssafy.io/dev/" // 실제 API 주소로 교체
+    private const val BASE_URL = "http://10.0.2.2:8082/" // 실제 API 주소로 교체
 
     var authListener: AuthListener? = null
 

@@ -145,11 +145,17 @@ private fun sendIdTokenToServer(
         try {
             val response = RetrofitClient.apiService.googleLogin("Bearer $idToken")
             if (response.isSuccessful) {
-                val jwt = response.body()?.data?.jwtToken
-                val userId = response.body()?.data?.userId
+                val data = response.body()?.data
+                val jwt = data?.jwtToken
+                val userId = data?.userId
+                val userName = data?.userName
+
                 if (!jwt.isNullOrEmpty() && userId != null) {
                     TokenProvider.token = jwt
                     PrefUtil.saveUserId(context, userId.toString())
+                    PrefUtil.saveUserName(context, userName ?: "?")   // ← 여기를 추가
+                    PrefUtil.saveJwtToken(context, jwt)
+
                     CoroutineScope(Dispatchers.Main).launch {
                         onSignedIn()
                     }
