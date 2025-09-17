@@ -48,8 +48,8 @@ public class ProductController {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "빈 파일이 포함되어 있습니다.");
             }
             String contentType = image.getContentType();
-            if (contentType == null || (!contentType.equals("image/jpeg") && !contentType.equals("image/png"))) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "JPG 또는 PNG 파일만 허용됩니다.");
+            if (contentType == null || !contentType.equals("image/jpeg")) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "JPEG 파일만 허용됩니다.");
             }
         }
 
@@ -81,8 +81,8 @@ public class ProductController {
         }
 
         String contentType = currentFrame.getContentType();
-        if (contentType == null || (!contentType.equals("image/jpeg") && !contentType.equals("image/png"))) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "JPG 또는 PNG 파일만 허용됩니다.");
+        if (contentType == null || !contentType.equals("image/jpeg")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "JPEG 파일만 허용됩니다.");
         }
 
         // 상품명 검증
