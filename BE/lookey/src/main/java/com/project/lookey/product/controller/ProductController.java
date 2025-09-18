@@ -35,10 +35,10 @@ public class ProductController {
     @PostMapping("/search")
     public ResponseEntity<?> searchShelf(
             @AuthenticationPrincipal(expression = "userId") Integer userId,
-            @RequestParam("shelf_images") MultipartFile[] shelfImages
+            @RequestPart("shelf_images") List<MultipartFile> shelfImages
     ) {
         // 이미지 4장 검증
-        if (shelfImages == null || shelfImages.length != 4) {
+        if (shelfImages == null || shelfImages.size() != 4) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "정확히 4장의 이미지가 필요합니다.");
         }
 
@@ -56,8 +56,9 @@ public class ProductController {
         // 사용자 장바구니 상품명 목록 조회
         List<String> cartProductNames = cartService.getCartProductNames(userId);
 
-        // AI 서비스로 매칭된 상품명 조회
-        List<String> matchedNames = aiSearchService.findMatchedProducts(shelfImages, cartProductNames);
+        // List를 배열로 변환하여 AI 서비스 호출
+        MultipartFile[] imageArray = shelfImages.toArray(new MultipartFile[0]);
+        List<String> matchedNames = aiSearchService.findMatchedProducts(imageArray, cartProductNames);
 
         // 응답 생성
         MatchCartResponse.Result result = new MatchCartResponse.Result(matchedNames.size(), matchedNames);
