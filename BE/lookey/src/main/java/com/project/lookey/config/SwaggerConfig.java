@@ -16,12 +16,6 @@ import org.springdoc.core.customizers.OpenApiCustomizer;
 import java.util.List;
 
 @Configuration
-@SecurityScheme(
-        name = "bearerAuth",
-        type = SecuritySchemeType.HTTP,
-        scheme = "bearer",
-        bearerFormat = "JWT"
-)
 public class SwaggerConfig {
 
     @Value("${spring.profiles.active:dev}")
