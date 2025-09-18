@@ -8,6 +8,7 @@ import com.project.lookey.product.service.AiSearchService;
 import com.project.lookey.product.service.PyonyCrawler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -19,7 +20,7 @@ import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/product")
+@RequestMapping("/api/v1/product")
 public class ProductController {
     private final PyonyCrawler crawler;
     private final CartService cartService;
@@ -32,7 +33,7 @@ public class ProductController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/search")
+    @PostMapping(value = "/search", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> searchShelf(
             @AuthenticationPrincipal(expression = "userId") Integer userId,
             @RequestPart("shelf_images") List<MultipartFile> shelfImages

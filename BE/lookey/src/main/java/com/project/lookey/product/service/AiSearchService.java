@@ -33,10 +33,11 @@ public class AiSearchService {
     private final ObjectMapper objectMapper;
     private final ProductRepository productRepository;
 
-    @Value("${ai.search.url:http://localhost:8000}")
+    @Value("${ai.search.url:http://localhost:9000}")
     private String aiServerUrl;
 
     public List<String> findMatchedProducts(MultipartFile[] images, List<String> cartProductNames) {
+        log.info("AI 상품 검색 요청 시작 - 이미지 개수: {}, 장바구니 상품 개수: {}", images.length, cartProductNames.size());
         try {
             MultipartBodyBuilder builder = new MultipartBodyBuilder();
 
@@ -55,6 +56,7 @@ public class AiSearchService {
             String cartProductNamesJson = objectMapper.writeValueAsString(cartProductNames);
             builder.part("cart_product_names", cartProductNamesJson);
 
+            log.info("AI 서버로 요청 전송 - URL: {}", aiServerUrl + "/api/product/search/ai");
             Map<String, Object> response = webClient
                     .post()
                     .uri(aiServerUrl + "/api/product/search/ai")
