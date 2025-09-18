@@ -15,6 +15,14 @@ import com.example.lookey.core.platform.tts.TtsController
 import com.example.lookey.ui.navigation.AppNavGraph
 import com.example.lookey.ui.theme.LooKeyTheme
 import com.example.lookey.util.PrefUtil
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.lookey.ui.theme.LookeyTheme
+import com.example.lookey.ui.viewmodel.AppSettingsViewModel
 
 
 class MainActivity : ComponentActivity() {
@@ -35,13 +43,22 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            LooKeyTheme {
+            val settingsVm: AppSettingsViewModel = viewModel()
+            val mode by settingsVm.themeMode.collectAsState()
+
+            LookeyTheme(mode = mode) {
                 val navController = rememberNavController()
-                AppNavGraph(
-                    navController = navController,
-                    tts = tts,
-                    userNameState = userNameState // State 전달
-                )
+
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    AppNavGraph(
+                        navController = navController,
+                        tts = tts,
+                        userNameState = userNameState // 여기 추가
+                    )
+                }
             }
         }
     }
