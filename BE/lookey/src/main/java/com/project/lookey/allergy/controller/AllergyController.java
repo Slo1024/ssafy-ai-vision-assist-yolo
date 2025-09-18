@@ -6,7 +6,6 @@ import com.project.lookey.allergy.dto.AllergyRemoveRequest;
 import com.project.lookey.allergy.dto.AllergySearchResponse;
 import com.project.lookey.allergy.service.AllergyService;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
@@ -18,13 +17,13 @@ import java.util.Map;
 @RequestMapping("/api/v1/allergy")
 @RequiredArgsConstructor
 @Tag(name = "Allergy", description = "알레르기 관련 API")
-@SecurityRequirement(name = "bearerAuth")
 public class AllergyController {
 
     private final AllergyService allergyService;
 
     @GetMapping
     public ResponseEntity<?> list(
+            @RequestHeader(value = "Authorization", required = true) String authorization,
             @AuthenticationPrincipal(expression = "userId") Integer userId
     ) {
         AllergyListResponse data = allergyService.getMyAllergies(userId);
@@ -37,6 +36,7 @@ public class AllergyController {
 
     @GetMapping("/search/{searchword}")
     public ResponseEntity<?> search(
+            @RequestHeader(value = "Authorization", required = true) String authorization,
             @AuthenticationPrincipal(expression = "userId") Integer userId,
             @PathVariable("searchword") String searchword
     ) {
@@ -50,6 +50,7 @@ public class AllergyController {
 
     @PostMapping
     public ResponseEntity<?> add(
+            @RequestHeader(value = "Authorization", required = true) String authorization,
             @AuthenticationPrincipal(expression = "userId") Integer userId,
             @Valid @RequestBody AllergyAddRequest request
     ) {
@@ -63,6 +64,7 @@ public class AllergyController {
 
     @DeleteMapping(consumes = "application/json")
     public ResponseEntity<?> delete(
+            @RequestHeader(value = "Authorization", required = true) String authorization,
             @AuthenticationPrincipal(expression = "userId") Integer userId,
             @Valid @RequestBody AllergyRemoveRequest request
     ) {
