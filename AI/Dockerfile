@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     libxrender-dev \
     libgomp1 \
     wget \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching

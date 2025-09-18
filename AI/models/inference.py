@@ -86,16 +86,34 @@ class InferenceEngine:
             # Handle different checkpoint formats
             if isinstance(checkpoint, dict):
                 if 'head' in checkpoint:
-                    # Load only the linear head weights
-                    self.model.head.load_state_dict(checkpoint['head'])
+                    # Load only the linear head weights - handle fc.weight/fc.bias keys
+                    head_state = checkpoint['head']
+                    if 'fc.weight' in head_state and 'fc.bias' in head_state:
+                        # Map fc.weight/fc.bias to weight/bias
+                        mapped_state = {
+                            'weight': head_state['fc.weight'],
+                            'bias': head_state['fc.bias']
+                        }
+                        self.model.head.load_state_dict(mapped_state)
+                    else:
+                        self.model.head.load_state_dict(head_state)
                     logger.info("Loaded linear head weights from checkpoint")
                 elif 'model_state_dict' in checkpoint:
                     self.model.load_state_dict(checkpoint['model_state_dict'])
                 elif 'state_dict' in checkpoint:
                     self.model.load_state_dict(checkpoint['state_dict'])
                 else:
-                    # Assume it's the state dict itself
-                    self.model.load_state_dict(checkpoint)
+                    # Assume it's the state dict itself - check for fc.weight/fc.bias
+                    if 'fc.weight' in checkpoint and 'fc.bias' in checkpoint:
+                        # This is just the linear head weights
+                        mapped_state = {
+                            'weight': checkpoint['fc.weight'],
+                            'bias': checkpoint['fc.bias']
+                        }
+                        self.model.head.load_state_dict(mapped_state)
+                        logger.info("Loaded linear head weights directly")
+                    else:
+                        self.model.load_state_dict(checkpoint)
             else:
                 logger.warning("Unexpected checkpoint format, attempting direct load")
                 return False
