@@ -23,6 +23,7 @@ public class CartController {
 
     @GetMapping
     public ResponseEntity<?> list(
+            @RequestHeader(value = "Authorization", required = true) String authorization,
             @AuthenticationPrincipal(expression = "userId") Integer userId
     ) {
         CartListResponse data = cartService.getMyCart(userId);
@@ -35,6 +36,7 @@ public class CartController {
 
     @GetMapping("/search/{searchword}")
     public ResponseEntity<?> search(
+            @RequestHeader(value = "Authorization", required = true) String authorization,
             @AuthenticationPrincipal(expression = "userId") Integer userId,
             @PathVariable("searchword") String searchword
     ) {
@@ -48,6 +50,7 @@ public class CartController {
 
     @PostMapping
     public ResponseEntity<?> add(
+            @RequestHeader(value = "Authorization", required = true) String authorization,
             @AuthenticationPrincipal(expression = "userId") Integer userId,
             @Valid @RequestBody CartAddRequest request
     ) {
@@ -61,6 +64,7 @@ public class CartController {
 
     @DeleteMapping(consumes = "application/json")
     public ResponseEntity<?> delete(
+            @RequestHeader(value = "Authorization", required = true) String authorization,
             @AuthenticationPrincipal(expression = "userId") Integer userId,
             @Valid @RequestBody CartRemoveRequest request
     ) {
