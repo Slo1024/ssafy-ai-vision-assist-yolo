@@ -38,37 +38,62 @@ public class ProductController {
             @AuthenticationPrincipal(expression = "userId") Integer userId,
             @RequestPart("shelf_images") List<MultipartFile> shelfImages
     ) {
-        // 이미지 4장 검증
-        if (shelfImages == null || shelfImages.size() != 4) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "정확히 4장의 이미지가 필요합니다.");
-        }
+        System.out.println("=== [START] 상품 검색 API 호출됨 - userId: " + userId + ", 이미지 개수: " + (shelfImages != null ? shelfImages.size() : "null") + " ===");
 
-        // 이미지 파일 형식 검증
-        for (MultipartFile image : shelfImages) {
-            if (image.isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "빈 파일이 포함되어 있습니다.");
+        try {
+            // 이미지 4장 검증
+            System.out.println("[STEP 1] 이미지 개수 검증 시작");
+            if (shelfImages == null || shelfImages.size() != 4) {
+                System.out.println("[ERROR] 이미지 개수 오류 - 전달된 이미지: " + (shelfImages != null ? shelfImages.size() : "null") + "개");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "정확히 4장의 이미지가 필요합니다.");
             }
-            String contentType = image.getContentType();
-            if (contentType == null || !contentType.equals("image/jpeg")) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "JPEG 파일만 허용됩니다.");
+            System.out.println("[STEP 1] 이미지 개수 검증 통과 - 4개");
+
+            // 이미지 파일 형식 검증
+            System.out.println("[STEP 2] 이미지 형식 검증 시작");
+            for (int i = 0; i < shelfImages.size(); i++) {
+                MultipartFile image = shelfImages.get(i);
+                System.out.println("[STEP 2] 이미지 " + (i+1) + " - 파일명: " + image.getOriginalFilename() + ", 크기: " + image.getSize() + "bytes, ContentType: " + image.getContentType());
+
+                if (image.isEmpty()) {
+                    System.out.println("[ERROR] 빈 파일 발견 - 이미지 " + (i+1));
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "빈 파일이 포함되어 있습니다.");
+                }
+                String contentType = image.getContentType();
+                if (contentType == null || !contentType.equals("image/jpeg")) {
+                    System.out.println("[ERROR] 잘못된 파일 형식 - 이미지 " + (i+1) + ", ContentType: " + contentType);
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "JPEG 파일만 허용됩니다.");
+                }
             }
+            System.out.println("[STEP 2] 이미지 형식 검증 통과");
+
+            // 사용자 장바구니 상품명 목록 조회
+            System.out.println("[STEP 3] 장바구니 상품명 조회 시작 - userId: " + userId);
+            List<String> cartProductNames = cartService.getCartProductNames(userId);
+            System.out.println("[STEP 3] 장바구니 상품명 조회 완료 - 상품 개수: " + cartProductNames.size() + ", 상품명: " + cartProductNames);
+
+            // List를 배열로 변환하여 AI 서비스 호출
+            System.out.println("[STEP 4] AI 서비스 호출 시작");
+            MultipartFile[] imageArray = shelfImages.toArray(new MultipartFile[0]);
+            List<String> matchedNames = aiSearchService.findMatchedProducts(imageArray, cartProductNames);
+            System.out.println("[STEP 4] AI 서비스 호출 완료 - 매칭된 상품 개수: " + matchedNames.size() + ", 매칭된 상품: " + matchedNames);
+
+            // 응답 생성
+            System.out.println("[STEP 5] 응답 생성 시작");
+            MatchCartResponse.Result result = new MatchCartResponse.Result(matchedNames.size(), matchedNames);
+
+            System.out.println("[SUCCESS] 상품 검색 완료 - 매칭된 상품: " + matchedNames.size() + "개");
+            return ResponseEntity.ok(Map.of(
+                    "status", 200,
+                    "message", "매대에서 장바구니 상품 확인 완료",
+                    "result", result
+            ));
+
+        } catch (Exception e) {
+            System.out.println("[ERROR] 상품 검색 중 예외 발생: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
-
-        // 사용자 장바구니 상품명 목록 조회
-        List<String> cartProductNames = cartService.getCartProductNames(userId);
-
-        // List를 배열로 변환하여 AI 서비스 호출
-        MultipartFile[] imageArray = shelfImages.toArray(new MultipartFile[0]);
-        List<String> matchedNames = aiSearchService.findMatchedProducts(imageArray, cartProductNames);
-
-        // 응답 생성
-        MatchCartResponse.Result result = new MatchCartResponse.Result(matchedNames.size(), matchedNames);
-        
-        return ResponseEntity.ok(Map.of(
-                "status", 200,
-                "message", "매대에서 장바구니 상품 확인 완료",
-                "result", result
-        ));
     }
 
     @PostMapping("/search/location")
