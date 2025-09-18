@@ -1,0 +1,42 @@
+networks:
+  shared-network:
+    external: true  # Use existing shared network
+
+services:
+  ai-service:
+    build:
+      context: ./AI
+      dockerfile: Dockerfile
+    container_name: lookey-ai-service
+    ports:
+      - "8083:8083"
+    volumes:
+      # Mount the model file from dev directory
+      - "./clip_linear_head.pt:/models/clip_linear_head.pt:ro"
+      # Mount logs directory
+      - ai-logs:/app/logs
+    environment:
+      - MODEL_PATH=/models/clip_linear_head.pt
+      - LOG_LEVEL=INFO
+      - WORKERS=1
+    networks:
+      - shared-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8083/health', timeout=10)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          # Adjust based on your server capacity
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
+volumes:
+  ai-logs:
