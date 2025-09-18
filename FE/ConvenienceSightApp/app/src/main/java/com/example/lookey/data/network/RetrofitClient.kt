@@ -32,7 +32,7 @@ object RetrofitClient {
             val originalRequest = chain.request()
             val context = originalRequest.tag(Context::class.java)
             val builder = chain.request().newBuilder()
-                .addHeader("Content-Type", "application/json")
+//                .addHeader("Content-Type", "application/json")
 
             // Access Token 헤더 추가
             val accessToken = TokenProvider.token ?: context?.let { PrefUtil.getJwtToken(it) }

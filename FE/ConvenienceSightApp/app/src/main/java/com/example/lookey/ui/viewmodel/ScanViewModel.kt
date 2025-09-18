@@ -1,3 +1,4 @@
+// app/src/main/java/com/example/lookey/ui/viewmodel/ScanViewModel.kt
 package com.example.lookey.ui.viewmodel
 
 import android.graphics.Bitmap
@@ -6,53 +7,52 @@ import androidx.lifecycle.viewModelScope
 import com.example.lookey.domain.entity.DetectResult
 import com.example.lookey.ui.cart.CartPort
 import com.example.lookey.ui.scan.ResultFormatter
+import com.example.lookey.data.network.Repository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.random.Random
+import java.io.File
 
 class ScanViewModel(
     private val speak: (String) -> Unit = {},
-    private val cart: CartPort? = null   // ✅ CartPort 하나만 주입
+    private val cart: CartPort? = null,
+    private val repoNet: Repository = Repository(),
+    private val cacheDir: File,
+    /** 현재 화면 프레임 공급자(PreviewView.bitmap 등). 없으면 006은 스텁 */
+    private val frameProvider: (() -> Bitmap?)? = null
 ) : ViewModel() {
 
     enum class Mode { SCAN, GUIDE }
 
     /** 9방향 버킷 */
     enum class DirectionBucket(val label: String) {
-        LEFT_UP("왼쪽 위"),
-        UP("위"),
-        RIGHT_UP("오른쪽 위"),
-        LEFT("왼쪽"),
-        CENTER("가운데"),
-        RIGHT("오른쪽"),
-        LEFT_DOWN("왼쪽 아래"),
-        DOWN("아래"),
-        RIGHT_DOWN("오른쪽 아래")
+        LEFT_UP("왼쪽 위"), UP("위"), RIGHT_UP("오른쪽 위"),
+        LEFT("왼쪽"), CENTER("가운데"), RIGHT("오른쪽"),
+        LEFT_DOWN("왼쪽 아래"), DOWN("아래"), RIGHT_DOWN("오른쪽 아래")
     }
 
     data class UiState(
-        val mode: Mode = Mode.SCAN,                 // 하단 토글 상태
-        val scanning: Boolean = false,              // “탐색 중”(광각 유지)
-        val capturing: Boolean = false,             // 3초/4장 촬영 중
-        val current: DetectResult? = null,          // 화면에서 감지된 top-1(옵션)
+        val mode: Mode = Mode.SCAN,
+        val scanning: Boolean = false,
+        val capturing: Boolean = false,
+        val current: DetectResult? = null,
         val banner: ResultFormatter.Banner? = null,
 
-        // 파노라마 캡처 결과(005용) — 지금은 보관만 (API 미연동)
+        // 005 파노라마 캡처
         val capturedFrames: List<Bitmap> = emptyList(),
 
-        // 장바구니 순차 안내 큐
-        val cartGuideQueue: List<String> = emptyList(), // 매대에서 확인된 장바구니 상품명들
-        val cartGuideTargetName: String? = null,        // 현재 안내 대상
-        val showCartGuideModal: Boolean = false,        // “안내할까요?” 모달
+        // 장바구니 순차 안내
+        val cartGuideQueue: List<String> = emptyList(),
+        val cartGuideTargetName: String? = null,
+        val showCartGuideModal: Boolean = false,
 
-        // 위치 안내(006 흐름)
-        val guiding: Boolean = false,                   // 1초 루프 On
-        val guideDirection: DirectionBucket? = null,    // 최근 방향 버킷
+        // 006 위치 안내
+        val guiding: Boolean = false,
+        val guideDirection: DirectionBucket? = null,
 
-        // 길 안내(별개 축)
+        // (옵션) 텍스트 안내 루프
         val guideMsg: String? = null,
         val guideTicking: Boolean = false
     )
@@ -72,7 +72,7 @@ class ScanViewModel(
         }
     }
 
-    /** FeaturePill: “상품 탐색 시작” → 3초간 4장 캡처 후 종료 + 매대 확인 큐 구성(스텁) */
+    /** 005: 4장 캡처 → 서버 호출 → 큐/모달 세팅 */
     fun startPanorama() {
         if (_ui.value.mode != Mode.SCAN) return
 
@@ -90,94 +90,138 @@ class ScanViewModel(
                 )
             }
 
-            // 0/1/2/3초 캡처 (스텁 비트맵)
+            // 기본 4회 캡처
             repeat(4) { idx ->
-                delay(if (idx == 0) 0 else 1000)
+                delay(if (idx == 0) 0 else 800)
                 captureFrame(idx)
             }
 
-            // 촬영 종료 + 스캔 종료
+            // 부족하면 조용히 보충 캡처
+            var guard = 0
+            while (_ui.value.capturedFrames.size < 4 && guard < 6) {
+                delay(300)
+                captureFrame(_ui.value.capturedFrames.size)
+                guard++
+            }
+
+            // UI 종료
             _ui.update { it.copy(capturing = false, scanning = false) }
 
-            // (005 스텁) 매대에서 장바구니 상품 매칭 → 큐 구성
-            val matched = stubCheckShelfForCartItems(_ui.value.capturedFrames)
-            val next = matched.firstOrNull()
+            val framesToSend = _ui.value.capturedFrames.take(4)
+            if (framesToSend.size < 4) {
+                // 사용자 알림 없이 중단
+                return@launch
+            }
 
-            // 종료 배너
-            _ui.update {
-                it.copy(
-                    banner = ResultFormatter.Banner(
-                        type = ResultFormatter.Banner.Type.SUCCESS,
-                        text = "상품 인식이 종료되었습니다."
-                    ),
-                    cartGuideQueue = matched,
-                    cartGuideTargetName = next,
-                    showCartGuideModal = (next != null)
-                )
+            // 서버 호출
+            runCatching {
+                repoNet.productShelfSearch(cacheDir, framesToSend)
+            }.onSuccess { res ->
+                val matched = res.result.matchedNames.orEmpty()
+                val next = matched.firstOrNull()
+
+                _ui.update {
+                    it.copy(
+                        banner = ResultFormatter.Banner(
+                            type = ResultFormatter.Banner.Type.SUCCESS,
+                            text = "상품 인식이 종료되었습니다."
+                        ),
+                        cartGuideQueue = matched,
+                        cartGuideTargetName = next,
+                        showCartGuideModal = (next != null)
+                    )
+                }
+            }.onFailure { e ->
+                // 조용히 로그만
+                println("PRODUCT-005 failed: ${e.message}")
             }
         }
     }
 
-    /** 스텁: 005 응답 대체 — 장바구니 목록 일부를 ‘매칭’된 것으로 간주 */
-    private fun stubCheckShelfForCartItems(frames: List<Bitmap>): List<String> {
-        val names = cart?.namesSnapshot().orEmpty()
-        if (frames.isEmpty() || names.isEmpty()) return emptyList()
-        // 데모: 1~3개 랜덤 매칭
-        val count = Random.nextInt(1, minOf(3, names.size) + 1)
-        return names.shuffled().take(count)
-    }
-
-    /** 모달: “예” → 006 흐름 시작(방향→단일 인식→정보 배너→장바구니 제거→다음으로) */
+    /** 모달: “예” → 006 시작 */
     fun onCartGuideConfirm() {
         val target = _ui.value.cartGuideTargetName ?: return
         _ui.update { it.copy(showCartGuideModal = false, guiding = true, guideDirection = null) }
-        start006StubLoop(target)
+        start006Loop(target)
     }
 
-    /** 모달: “아니요” → 이번 상품은 스킵하고 다음으로 */
+    /** 모달: “아니요” → 다음 타겟 */
     fun onCartGuideSkip() {
         proceedToNextCartTarget()
     }
 
-    private fun start006StubLoop(targetName: String) {
+    /** 006: 프레임 전송 폴링 → 방향 or 단일 인식 */
+    private fun start006Loop(targetName: String) {
         viewModelScope.launch {
-            // 1~2초 동안 방향만 안내 → 그 후 단일 인식 ‘정보’ 도착 스텁
-            val directionTicks = Random.nextInt(1, 3) // 1~2번
-            repeat(directionTicks) {
-                delay(1000)
-                val dir = DirectionBucket.values().random()
-                _ui.update { it.copy(guideDirection = dir) }
-                speak("$targetName 이(가) ${dir.label}에 있습니다.")
-            }
+            if (frameProvider == null) return@launch start006StubOnce(targetName)
 
-            // 단일 인식 완료(정보 도착) 스텁
+            repeat(4) {
+                val frame = frameProvider.invoke() ?: return@repeat
+                val res = runCatching {
+                    repoNet.productLocation(cacheDir, frame, targetName) // ✅ 실제 호출
+                }.getOrNull()
+
+                when (res?.result?.caseType) {                          // ✅ dto의 필드명에 맞춤
+                    "DIRECTION" -> {
+                        val dir = res.result.target?.directionBucket?.toDirectionBucketOrNull()
+                        _ui.update { it.copy(guideDirection = dir) }
+                        if (dir != null) speak("$targetName 이(가) ${dir.label}에 있습니다.")
+                        delay(800)
+                    }
+                    "SINGLE_RECOGNIZED" -> {
+                        val info = res.result.info
+                        val banner = ResultFormatter.toBanner(
+                            DetectResult(
+                                id = info?.name ?: targetName,
+                                name = info?.name ?: targetName,
+                                price = info?.price,
+                                promo = info?.event,
+                                hasAllergy = info?.allergy == true,
+                                allergyNote = if (info?.allergy == true) "알레르기 주의" else null,
+                                confidence = 0.95f
+                            )
+                        )
+                        _ui.update { it.copy(banner = banner, guiding = false, guideDirection = null) }
+                        cart?.remove(info?.name ?: targetName)
+                        proceedToNextCartTarget()
+                        speak(ResultFormatter.toVoice(
+                            DetectResult(
+                                id = info?.name ?: targetName,
+                                name = info?.name ?: targetName,
+                                price = info?.price,
+                                promo = info?.event,
+                                hasAllergy = info?.allergy == true,
+                                allergyNote = if (info?.allergy == true) "알레르기 주의" else null,
+                                confidence = 0.95f
+                            )
+                        ).text)
+                        return@launch
+                    }
+                    else -> delay(600)
+                }
+            }
+            _ui.update { it.copy(guiding = false, guideDirection = null) }
+        }
+
+}
+
+    /** (프레임 공급자 없을 때) 스텁 1회 */
+    private fun start006StubOnce(targetName: String) {
+        viewModelScope.launch {
+            val dir = DirectionBucket.values().random()
+            _ui.update { it.copy(guideDirection = dir) }
+            speak("$targetName 이(가) ${dir.label}에 있습니다.")
             delay(500)
             val info = DetectResult(
-                id = targetName,                 // 구현부에서 name=ID로 매핑 처리
-                name = targetName,
-                price = listOf(1500, 1700, 2000, 2200, 2500).random(),
+                id = targetName, name = targetName,
+                price = listOf(1500,1700,2000,2200,2500).random(),
                 promo = listOf("1+1", "2+1", null).random(),
-                hasAllergy = listOf(true, false).random(),
-                allergyNote = "유당 포함",
-                confidence = 0.95f
+                hasAllergy = listOf(true,false).random(),
+                allergyNote = "유당 포함", confidence = 0.95f
             )
-            val banner = ResultFormatter.toBanner(info)
-
-            _ui.update {
-                it.copy(
-                    banner = banner,
-                    guiding = false,
-                    guideDirection = null
-                )
-            }
-
-            // 장바구니에서 제거
+            _ui.update { it.copy(banner = ResultFormatter.toBanner(info), guiding = false, guideDirection = null) }
             cart?.remove(info.id)
-
-            // 다음 타겟으로 진행
             proceedToNextCartTarget()
-
-            // (선택) 음성 안내
             speak(ResultFormatter.toVoice(info).text)
         }
     }
@@ -199,32 +243,24 @@ class ScanViewModel(
         }
     }
 
-    /** 사진 캡처 (Stub) — 실제론 CameraX ImageCapture로 교체 예정 */
+    /** 임시 캡처(placeholder) */
     private fun captureFrame(index: Int) {
-        val placeholder = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        val placeholder = Bitmap.createBitmap(800, 600, Bitmap.Config.ARGB_8888)
         _ui.update { it.copy(capturedFrames = it.capturedFrames + placeholder) }
-        println("📷 ${index + 1}번째 사진 촬영됨 (placeholder)")
     }
 
-    fun clearCapturedFrames() {
-        _ui.update { it.copy(capturedFrames = emptyList()) }
-    }
+    fun clearCapturedFrames() { _ui.update { it.copy(capturedFrames = emptyList()) } }
 
-    /** (옵션) 단일 감지 배너 — 기존 더미 로직 (필요하면 유지) */
     fun onDetected(result: DetectResult) {
         val banner = ResultFormatter.toBanner(result)
         _ui.update { it.copy(current = result, banner = banner) }
-
         if (result.id != lastSpokenId) {
             speak(ResultFormatter.toVoice(result).text)
             lastSpokenId = result.id
         }
     }
 
-    fun clearBanner() {
-        _ui.update { it.copy(banner = null) }
-    }
-
+    fun clearBanner() { _ui.update { it.copy(banner = null) } }
 
     fun debugShowBannerSample() {
         _ui.update {
@@ -237,13 +273,21 @@ class ScanViewModel(
         }
     }
 
-    /** 장바구니 여부와 무관하게 모달만 강제로 띄우기 */
     fun debugShowCartGuideModalSample(name: String = "코카콜라 제로 500ml") {
-        _ui.update {
-            it.copy(
-                cartGuideTargetName = name,
-                showCartGuideModal = true
-            )
-        }
+        _ui.update { it.copy(cartGuideTargetName = name, showCartGuideModal = true) }
+    }
+
+    // === util ===
+    private fun String.toDirectionBucketOrNull(): DirectionBucket? = when (this) {
+        "왼쪽위" -> DirectionBucket.LEFT_UP
+        "위" -> DirectionBucket.UP
+        "오른쪽위" -> DirectionBucket.RIGHT_UP
+        "왼쪽" -> DirectionBucket.LEFT
+        "가운데" -> DirectionBucket.CENTER
+        "오른쪽" -> DirectionBucket.RIGHT
+        "왼쪽아래" -> DirectionBucket.LEFT_DOWN
+        "아래" -> DirectionBucket.DOWN
+        "오른쪽아래" -> DirectionBucket.RIGHT_DOWN
+        else -> null
     }
 }
