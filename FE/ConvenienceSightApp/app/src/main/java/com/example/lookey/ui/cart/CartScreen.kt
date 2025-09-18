@@ -33,12 +33,13 @@ fun CartScreen(
 
         SearchInput(
             query = query,
-            onQueryChange = { q -> query = q; viewModel.search(q) },
-            onSearch = { viewModel.search(query) },
+            onQueryChange = { q -> query = q; viewModel.searchProducts(q) },
+            onSearch = { viewModel.searchProducts(query) },
             placeholder = "상품 이름을 검색해주세요",
             modifier = Modifier.fillMaxWidth(),
             shape = pill
         )
+
 
         Spacer(Modifier.height(28.dp))
         MicActionButton(onClick = { onMicClick?.invoke() }, sizeDp = 120)
@@ -87,7 +88,7 @@ fun CartScreen(
                 pendingItem = null
                 // 장바구니 화면으로 전환
                 query = ""
-                viewModel.search("")
+                viewModel.searchProducts("")
             },
             onDismiss = { pendingItem = null }
         )
