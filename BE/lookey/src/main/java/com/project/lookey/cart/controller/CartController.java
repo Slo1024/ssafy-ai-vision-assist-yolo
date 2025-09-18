@@ -5,7 +5,6 @@ import com.project.lookey.cart.dto.CartListResponse;
 import com.project.lookey.cart.dto.CartRemoveRequest;
 import com.project.lookey.cart.dto.ProductSearchResponse;
 import com.project.lookey.cart.service.CartService;
-import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
@@ -22,7 +21,6 @@ public class CartController {
 
     @GetMapping
     public ResponseEntity<?> list(
-            @Parameter(hidden = true)
             @AuthenticationPrincipal(expression = "userId") Integer userId
     ) {
         CartListResponse data = cartService.getMyCart(userId);
