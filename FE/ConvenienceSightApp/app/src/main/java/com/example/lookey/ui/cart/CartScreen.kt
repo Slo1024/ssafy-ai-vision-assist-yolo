@@ -62,7 +62,7 @@ fun CartScreen(
                 cart.forEach { line ->
                     PillListItem(
                         title = line.name ?: "이름 없음",
-                        onDelete = { line.cartId?.let {  } },
+                        onDelete = { line.cartId?.let { viewModel.removeFromCart(it) } },
                         shape = pill
                     )
                 }
