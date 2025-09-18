@@ -10,6 +10,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.lookey.ui.viewmodel.CartViewModel
 import com.example.lookey.ui.components.*
+import com.example.lookey.data.model.ProductSearchResponse
+import com.example.lookey.ui.viewmodel.CartLine
 
 @Composable
 fun CartScreen(
@@ -18,10 +20,14 @@ fun CartScreen(
 ) {
     val pill = MaterialTheme.shapes.extraLarge
 
+    LaunchedEffect(Unit) {
+        viewModel.loadCart()
+    }
+
     var query by rememberSaveable { mutableStateOf("") }
     val results by viewModel.results.collectAsState()
     val cart by viewModel.cart.collectAsState()
-    var pendingItem by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingItem by remember { mutableStateOf<ProductSearchResponse.Item?>(null) }
 
     Column(
         modifier = Modifier
@@ -55,8 +61,8 @@ fun CartScreen(
                 Spacer(Modifier.height(8.dp))
                 cart.forEach { line ->
                     PillListItem(
-                        title = line.name,
-                        onDelete = { viewModel.removeFromCart(line.name) },
+                        title = line.name ?: "이름 없음",
+                        onDelete = { line.cartId?.let {  } },
                         shape = pill
                     )
                 }
@@ -67,9 +73,12 @@ fun CartScreen(
             }
 
             results.isNotEmpty() -> {
+                // results를 그냥 String 리스트가 아니라 CartLine 리스트로 변환해서 전달
                 SuggestionList(
-                    items = results,
-                    onClick = { pendingItem = it },
+                    items = results.map { it.productName },
+                    onClick = { clickedName ->
+                        pendingItem = results.find { it.productName == clickedName }
+                    },
                     shape = pill
                 )
             }
@@ -82,11 +91,12 @@ fun CartScreen(
 
     if (pendingItem != null) {
         ConfirmDialog(
-            message = "${pendingItem}를\n장바구니에 추가하시겠습니까?",
+            message = "${pendingItem?.productName}를\n장바구니에 추가하시겠습니까?",
             onConfirm = {
-                viewModel.addToCart(pendingItem!!)
+                pendingItem?.let {
+                    viewModel.addToCart(it.productId!!.toInt(), it.productName)
+                }
                 pendingItem = null
-                // 장바구니 화면으로 전환
                 query = ""
                 viewModel.searchProducts("")
             },

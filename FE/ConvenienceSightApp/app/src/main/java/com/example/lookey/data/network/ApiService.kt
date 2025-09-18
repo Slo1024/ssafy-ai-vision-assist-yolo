@@ -14,6 +14,7 @@ import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface ApiService {
     // 구글
@@ -36,5 +37,7 @@ interface ApiService {
     suspend fun addToCart(@Body request: CartAddRequest): Response<Void>
 
     @DELETE("api/v1/carts")
-    suspend fun removeFromCart(@Body request: CartRemoveRequest): Response<Void>
+    suspend fun removeFromCart(@Query("cart_id") cartId: Int): Response<Void>
+
+
 }
