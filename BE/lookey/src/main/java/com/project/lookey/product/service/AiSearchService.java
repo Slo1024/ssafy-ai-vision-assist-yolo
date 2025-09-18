@@ -37,17 +37,11 @@ public class AiSearchService {
     private String aiServerUrl;
 
     public List<String> findMatchedProducts(MultipartFile[] images, List<String> cartProductNames) {
-        System.out.println("[AI-SERVICE] 요청 시작 - 이미지: " + images.length + "개, 장바구니 상품: " + cartProductNames.size() + "개");
         try {
-            System.out.println("[AI-SERVICE] MultipartBodyBuilder 생성 시작");
             MultipartBodyBuilder builder = new MultipartBodyBuilder();
 
             // 이미지 4장 추가
-            System.out.println("[AI-SERVICE] 이미지 파일 처리 시작");
-            for (int i = 0; i < images.length; i++) {
-                MultipartFile image = images[i];
-                System.out.println("[AI-SERVICE] 이미지 " + (i+1) + " 처리 - 파일명: " + image.getOriginalFilename() + ", 크기: " + image.getSize() + "bytes");
-
+            for (MultipartFile image : images) {
                 ByteArrayResource resource = new ByteArrayResource(image.getBytes()) {
                     @Override
                     public String getFilename() {
@@ -55,18 +49,13 @@ public class AiSearchService {
                     }
                 };
                 builder.part("shelf_images", resource);
-                System.out.println("[AI-SERVICE] 이미지 " + (i+1) + " MultipartBody에 추가 완료");
             }
 
             // 장바구니 상품명 목록을 JSON 문자열로 변환하여 추가
-            System.out.println("[AI-SERVICE] 장바구니 상품명 JSON 변환 시작");
             String cartProductNamesJson = objectMapper.writeValueAsString(cartProductNames);
-            System.out.println("[AI-SERVICE] 장바구니 상품명 JSON: " + cartProductNamesJson);
             builder.part("cart_product_names", cartProductNamesJson);
 
             String requestUrl = aiServerUrl + "/api/product/search/ai";
-            System.out.println("[AI-SERVICE] AI 서버 요청 전송 시작 - URL: " + requestUrl);
-
             Map<String, Object> response = webClient
                     .post()
                     .uri(requestUrl)
@@ -76,39 +65,27 @@ public class AiSearchService {
                     .bodyToMono(Map.class)
                     .block();
 
-            System.out.println("[AI-SERVICE] AI 서버 응답 받음: " + response);
-
             if (response != null) {
                 @SuppressWarnings("unchecked")
                 List<String> matchedNames = (List<String>) response.get("matched_names");
-                System.out.println("[AI-SERVICE] 응답 파싱 완료 - 매칭된 상품: " + matchedNames);
                 return matchedNames != null ? matchedNames : List.of();
             } else {
-                System.out.println("[AI-SERVICE ERROR] AI 서버에서 빈 응답을 받았습니다.");
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "AI 서버에서 응답을 받지 못했습니다.");
             }
 
         } catch (WebClientResponseException e) {
-            System.out.println("[AI-SERVICE ERROR] AI 서버 HTTP 오류 - 상태코드: " + e.getStatusCode() + ", 메시지: " + e.getMessage());
-            System.out.println("[AI-SERVICE ERROR] 응답 본문: " + e.getResponseBodyAsString());
-            e.printStackTrace();
+            String errorDetails = "AI 서버 오류 (상태코드: " + e.getStatusCode() + ")";
             if (e.getStatusCode().is5xxServerError()) {
-                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "AI 서버에 일시적인 문제가 발생했습니다.");
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, errorDetails + " - AI 서버에 일시적인 문제가 발생했습니다.");
             } else {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI 서버 요청이 올바르지 않습니다.");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errorDetails + " - AI 서버 요청이 올바르지 않습니다.");
             }
         } catch (JsonProcessingException e) {
-            System.out.println("[AI-SERVICE ERROR] 장바구니 상품명 JSON 변환 오류: " + e.getMessage());
-            e.printStackTrace();
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "요청 데이터 처리 중 오류가 발생했습니다.");
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "장바구니 상품명 데이터 처리 중 오류가 발생했습니다.");
         } catch (IOException e) {
-            System.out.println("[AI-SERVICE ERROR] 이미지 파일 읽기 오류: " + e.getMessage());
-            e.printStackTrace();
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미지 파일을 읽을 수 없습니다.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미지 파일을 읽을 수 없습니다: " + e.getMessage());
         } catch (Exception e) {
-            System.out.println("[AI-SERVICE ERROR] 예상치 못한 오류: " + e.getClass().getSimpleName() + " - " + e.getMessage());
-            e.printStackTrace();
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "서비스 처리 중 오류가 발생했습니다.");
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "AI 서비스 처리 중 오류가 발생했습니다: " + e.getMessage());
         }
     }
 
