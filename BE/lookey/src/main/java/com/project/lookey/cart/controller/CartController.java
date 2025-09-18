@@ -5,6 +5,7 @@ import com.project.lookey.cart.dto.CartListResponse;
 import com.project.lookey.cart.dto.CartRemoveRequest;
 import com.project.lookey.cart.dto.ProductSearchResponse;
 import com.project.lookey.cart.service.CartService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
@@ -15,6 +16,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/carts")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearerAuth")
 public class CartController {
 
     private final CartService cartService;

@@ -6,6 +6,7 @@ import com.project.lookey.allergy.dto.AllergyRemoveRequest;
 import com.project.lookey.allergy.dto.AllergySearchResponse;
 import com.project.lookey.allergy.service.AllergyService;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
@@ -17,6 +18,7 @@ import java.util.Map;
 @RequestMapping("/api/v1/allergy")
 @RequiredArgsConstructor
 @Tag(name = "Allergy", description = "알레르기 관련 API")
+@SecurityRequirement(name = "bearerAuth")
 public class AllergyController {
 
     private final AllergyService allergyService;
