@@ -23,7 +23,6 @@ public class AllergyController {
 
     @GetMapping
     public ResponseEntity<?> list(
-            @RequestHeader(value = "Authorization", required = true) String authorization,
             @AuthenticationPrincipal(expression = "userId") Integer userId
     ) {
         AllergyListResponse data = allergyService.getMyAllergies(userId);
@@ -36,7 +35,6 @@ public class AllergyController {
 
     @GetMapping("/search/{searchword}")
     public ResponseEntity<?> search(
-            @RequestHeader(value = "Authorization", required = true) String authorization,
             @AuthenticationPrincipal(expression = "userId") Integer userId,
             @PathVariable("searchword") String searchword
     ) {
@@ -50,7 +48,6 @@ public class AllergyController {
 
     @PostMapping
     public ResponseEntity<?> add(
-            @RequestHeader(value = "Authorization", required = true) String authorization,
             @AuthenticationPrincipal(expression = "userId") Integer userId,
             @Valid @RequestBody AllergyAddRequest request
     ) {
@@ -64,7 +61,6 @@ public class AllergyController {
 
     @DeleteMapping(consumes = "application/json")
     public ResponseEntity<?> delete(
-            @RequestHeader(value = "Authorization", required = true) String authorization,
             @AuthenticationPrincipal(expression = "userId") Integer userId,
             @Valid @RequestBody AllergyRemoveRequest request
     ) {
