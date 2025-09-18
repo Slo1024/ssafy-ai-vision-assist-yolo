@@ -18,17 +18,12 @@ import java.util.List;
 @Configuration
 public class SwaggerConfig {
 
-    private static final String SECURITY_SCHEME_NAME = "bearerAuth";
-
     @Value("${spring.profiles.active:dev}")
     private String activeProfile;
 
     @Bean
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
-                .components(new Components()
-                        .addSecuritySchemes(SECURITY_SCHEME_NAME, bearerAuthScheme()))
-                .addSecurityItem(new SecurityRequirement().addList(SECURITY_SCHEME_NAME))
                 .info(new Info()
                         .title("Lookey API")
                         .description("음식 알레르기 정보 제공 서비스 API 문서")
@@ -38,15 +33,8 @@ public class SwaggerConfig {
                                 .url("https://j13e101.p.ssafy.io")
                         )
                 )
-                .servers(getServers());
-    }
-
-    private SecurityScheme bearerAuthScheme() {
-        return new SecurityScheme()
-                .type(SecurityScheme.Type.HTTP)
-                .scheme("bearer")
-                .bearerFormat("JWT")
-                .in(SecurityScheme.In.HEADER);
+                .servers(getServers())
+                .components(new Components());
     }
 
     @Bean
