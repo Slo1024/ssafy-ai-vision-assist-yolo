@@ -35,9 +35,10 @@ public class ProductController {
 
     @PostMapping(value = "/search", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> searchShelf(
-            @AuthenticationPrincipal(expression = "userId") Integer userId,
+            // @AuthenticationPrincipal(expression = "userId") Integer userId,
             @RequestPart("shelf_images") List<MultipartFile> shelfImages
     ) {
+        Integer userId = 1; // 테스트용 하드코딩
         System.out.println("=== [START] 상품 검색 API 호출됨 - userId: " + userId + ", 이미지 개수: " + (shelfImages != null ? shelfImages.size() : "null") + " ===");
 
         try {
