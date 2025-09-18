@@ -23,7 +23,6 @@ public class CartController {
     @GetMapping
     public ResponseEntity<?> list(
             @Parameter(hidden = true)
-            @RequestHeader(value = "Authorization", required = false) String authorization,
             @AuthenticationPrincipal(expression = "userId") Integer userId
     ) {
         CartListResponse data = cartService.getMyCart(userId);
