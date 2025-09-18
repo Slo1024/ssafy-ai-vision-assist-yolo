@@ -6,6 +6,8 @@ import com.project.lookey.OAuth.Repository.UserRepository;
 import com.project.lookey.OAuth.Service.Redis.JwtRedisService;
 import com.project.lookey.OAuth.Service.google.GoogleVerifierService;
 import com.project.lookey.OAuth.Service.jwt.JwtProvider;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,8 +29,9 @@ public class AuthController {
     private final JwtRedisService jwtRedisService;
 
     @PostMapping("/google")
+    @Operation(summary = "Google 로그인", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<Map<String, Object>> loginWithGoogle(
-            @RequestHeader("Authorization") String authorizationHeader
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
     ) {
 
         if (!authorizationHeader.startsWith("Bearer ")) {
