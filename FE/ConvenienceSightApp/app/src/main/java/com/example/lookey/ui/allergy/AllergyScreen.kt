@@ -3,25 +3,20 @@ package com.example.lookey.ui.allergy
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.lookey.ui.viewmodel.AllergyViewModel
 import com.example.lookey.ui.components.*
 
 @Composable
 fun AllergyScreen(
-    viewModel: AllergyViewModel = viewModel(),
+    vm: AllergyViewModel,
     onMicClick: (() -> Unit)? = null
 ) {
+    val state by vm.state.collectAsState()
     val pill = MaterialTheme.shapes.extraLarge
-
-    var query by rememberSaveable { mutableStateOf("") }
-    val results by viewModel.results.collectAsState()
-    val allergies by viewModel.allergies.collectAsState()
-    var pendingItem by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingItem by remember { mutableStateOf<Int?>(null) }  // allergyId 임시 저장
 
     Column(
         modifier = Modifier
@@ -31,10 +26,11 @@ fun AllergyScreen(
     ) {
         TitleHeader("알레르기 정보")
 
+        // 🔎 검색창
         SearchInput(
-            query = query,
-            onQueryChange = { q -> query = q; viewModel.search(q) },
-            onSearch = { viewModel.search(query) },
+            query = state.query,
+            onQueryChange = vm::updateQuery,
+            onSearch = {  q -> vm.doSearch(q) },
             placeholder = "알레르기 이름을 검색해주세요",
             modifier = Modifier.fillMaxWidth(),
             shape = pill
@@ -44,44 +40,75 @@ fun AllergyScreen(
         MicActionButton(onClick = { onMicClick?.invoke() }, sizeDp = 120)
         Spacer(Modifier.height(28.dp))
 
+        // 📋 상태별 UI
         when {
-            query.isBlank() && allergies.isNotEmpty() -> {
-                Text("내 알레르기", style = MaterialTheme.typography.titleLarge, modifier = Modifier.fillMaxWidth())
+            state.loading -> {
+                CircularProgressIndicator()
+            }
+
+            state.query.isBlank() && state.myAllergies.isNotEmpty() -> {
+                Text(
+                    "내 알레르기",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Spacer(Modifier.height(8.dp))
-                allergies.forEach { name ->
+                state.myAllergies.forEach { a ->
                     PillListItem(
-                        title = name,
-                        onDelete = { viewModel.removeAllergy(name) },
+                        title = a.name,
+                        onDelete = { vm.delete(a.id) },
                         shape = pill
                     )
                 }
             }
-            query.isBlank() && allergies.isEmpty() -> {
+
+            state.query.isBlank() && state.myAllergies.isEmpty() -> {
                 EmptyStateText("등록된 알레르기가\n없어요.\n검색해서 추가해보세요.")
             }
-            results.isNotEmpty() -> {
+
+            state.suggestions.isNotEmpty() -> {
                 SuggestionList(
-                    items = results,
-                    onClick = { pendingItem = it },
+                    items = state.suggestions.map { it.name },
+                    onClick = { name ->
+                        val item = state.suggestions.find { it.name == name }
+                        pendingItem = item?.id
+                    },
                     shape = pill
                 )
             }
+
             else -> {
                 Text("검색 결과가 없어요", style = MaterialTheme.typography.labelLarge)
             }
         }
     }
 
+    // ✅ 추가 확인 다이얼로그
     if (pendingItem != null) {
-        ConfirmDialog(
-            message = "${pendingItem}를\n내 알레르기에\n추가하시겠습니까?",
-            onConfirm = {
-                viewModel.addAllergy(pendingItem!!)
-                pendingItem = null
-                query = ""
-                viewModel.search("")
-            },
-            onDismiss = { pendingItem = null }
+        val item = state.suggestions.find { it.id == pendingItem }
+        if (item != null) {
+            ConfirmDialog(
+                message = "${item.name}를\n내 알레르기에\n추가하시겠습니까?",
+                onConfirm = {
+                    vm.add(item.id)
+                    pendingItem = null
+                },
+                onDismiss = { pendingItem = null }
+            )
+        }
+    }
+
+    // ✅ 에러 메시지
+    state.message?.let { msg ->
+        AlertDialog(
+            onDismissRequest = { vm.consumeMessage() },
+            title = { Text("오류") },
+            text = { Text(msg) },
+            confirmButton = {
+                TextButton(onClick = { vm.consumeMessage() }) {
+                    Text("확인")
+                }
+            }
         )
     }
 }
