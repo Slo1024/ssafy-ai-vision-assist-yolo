@@ -32,9 +32,8 @@ object RetrofitClient {
             val originalRequest = chain.request()
             val context = originalRequest.tag(Context::class.java)
             val builder = chain.request().newBuilder()
-//                .addHeader("Content-Type", "application/json")
 
-            // Access Token 헤더 추가
+            // 토큰 부착
             val accessToken = TokenProvider.token ?: context?.let { PrefUtil.getJwtToken(it) }
             accessToken?.let { builder.addHeader("Authorization", "Bearer $it") }
 
@@ -42,35 +41,39 @@ object RetrofitClient {
             var response = chain.proceed(request)
 
             if (response.code == 401 && context != null) {
-                // Access Token 만료 → Refresh Token으로 재발급 시도
                 val refreshToken = PrefUtil.getRefreshToken(context)
                 if (!refreshToken.isNullOrEmpty()) {
                     val newToken = refreshAccessToken(refreshToken)
                     if (!newToken.isNullOrEmpty()) {
                         PrefUtil.saveJwtToken(context, newToken)
                         TokenProvider.token = newToken
-
-                        // 새 토큰으로 요청 재시도
                         request = originalRequest.newBuilder()
                             .header("Authorization", "Bearer $newToken")
                             .build()
                         response = chain.proceed(request)
                     } else {
-                        // Refresh Token 만료 → 로그아웃
-                        PrefUtil.clear(context)
-                        authListener?.onLogout()
+                        PrefUtil.clear(context); authListener?.onLogout()
                     }
                 } else {
-                    PrefUtil.clear(context)
-                    authListener?.onLogout()
+                    PrefUtil.clear(context); authListener?.onLogout()
                 }
             }
 
-            // 요청/응답 로그
+            // ✅ 여기부터를 추가
             Log.d("RetrofitClient", "=== API 요청 URL === ${request.url}")
             Log.d("RetrofitClient", "=== Status === ${response.code}")
+
+            if (!response.isSuccessful) {
+                val errBody = try {
+                    response.peekBody(1024 * 1024).string() // 바디 복사본
+                } catch (_: Throwable) { "" }
+                Log.e("RetrofitClient", "=== Error body === $errBody")
+            }
+            // ✅ 여기까지 추가
+
             response
         }
+
         .build()
 
     private val retrofit: Retrofit = Retrofit.Builder()

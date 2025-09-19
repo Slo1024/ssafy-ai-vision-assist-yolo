@@ -8,6 +8,7 @@ import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.ByteArrayOutputStream
 import java.io.File
+import android.util.Base64
 
 private val JPEG = "image/jpeg".toMediaType()
 private val TEXT = "text/plain".toMediaType()
@@ -72,6 +73,14 @@ fun buildNavImagePart(cacheDir: File, bmp: Bitmap): MultipartBody.Part {
         maxBytes = 4_000_000
     )
     return MultipartBody.Part.createFormData("image", f.name, f.asRequestBody(JPEG))
+}
+
+fun Bitmap.toBase64Jpeg(width: Int, height: Int, quality: Int): String {
+    val scaled = if (this.width == width && this.height == height)
+        this else Bitmap.createScaledBitmap(this, width, height, true)
+    val bos = ByteArrayOutputStream()
+    scaled.compress(Bitmap.CompressFormat.JPEG, quality.coerceIn(1, 100), bos)
+    return Base64.encodeToString(bos.toByteArray(), Base64.NO_WRAP)
 }
 
 fun Bitmap.toJpegMaxUnderSize(

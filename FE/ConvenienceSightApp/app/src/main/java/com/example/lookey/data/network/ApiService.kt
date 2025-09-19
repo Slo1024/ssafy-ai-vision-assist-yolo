@@ -23,14 +23,21 @@ interface ApiService {
     @POST("api/auth/refresh")
     fun refreshToken(@Body request: RefreshRequest): Response<LoginResponse>
 
+    // 005: 그대로 multipart
     @Multipart
     @POST("api/v1/product/search")
     suspend fun searchShelf(
         @Part shelfImage: MultipartBody.Part
     ): Response<ApiResponse<ShelfSearchResult>>
 
-    // 스웨거 기준: product_name = query
-    // 백엔드가 멀티파트 file + query 조합을 받도록 구현돼 있다면 이 형태로 맞음.
+    // 006: 스웨거 정의가 JSON + query 인 경우를 지원
+    @POST("api/v1/product/search/location")
+    suspend fun searchProductLocationJson(
+        @Query("product_name") productName: String,
+        @Body body: Map<String, String>   // { "current_frame": "<base64>" }
+    ): Response<ApiResponse<LocationSearchResult>>
+
+    // 기존 multipart 메서드는 유지(서버가 멀티파트로 바꾸면 사용)
     @Multipart
     @POST("api/v1/product/search/location")
     suspend fun searchProductLocation(
@@ -38,16 +45,17 @@ interface ApiService {
         @Query("product_name") productName: String
     ): Response<ApiResponse<LocationSearchResult>>
 
-    // AI-001: 우선 멀티파트 버전 유지
+    // AI-001: JSON 버전 추가 (스웨거 기준)
+    @POST("api/v1/vision/ai/analyze")
+    suspend fun navGuideJson(
+        @Body body: Map<String, String>   // { "file": "<base64>" }
+    ): Response<VisionAnalyzeResponse>
+
+    // 기존 multipart 메서드도 유지(서버가 멀티파트 허용 시 사용)
     @Multipart
     @POST("api/v1/vision/ai/analyze")
     suspend fun navGuide(
         @Part image: MultipartBody.Part
     ): Response<VisionAnalyzeResponse>
 
-    // (선택) 스웨거가 JSON만 표기돼 있고 실제도 JSON이라면 이걸로 호출 테스트
-    @POST("api/v1/vision/ai/analyze")
-    suspend fun navGuideJson(
-        @Body body: Map<String, String> // body["file"] 에 base64
-    ): Response<VisionAnalyzeResponse>
 }

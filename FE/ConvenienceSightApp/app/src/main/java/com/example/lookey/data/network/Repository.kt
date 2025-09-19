@@ -21,32 +21,39 @@ class Repository {
     }
 
     // ============= 상품 인식 =============
-    /** PRODUCT-005: 매대 사진 1장 업로드 */
+    // 005: 그대로(파일 1장, 800x600, ≤1MB)
     suspend fun productShelfSearch(cacheDir: File, frame: Bitmap)
             : ApiResponse<ShelfSearchResult> {
-        val part = buildShelfImagePart(cacheDir, frame) // 800x600, <=1MB
+        val part = buildShelfImagePart(cacheDir, frame)
         return api.searchShelf(part).bodyOrThrow()
     }
 
-    /** PRODUCT-006: 현재 화면 1장 + 상품명 */
+    // 006: JSON 우선, 실패 시 멀티파트로 폴백(둘 다 구현돼 있을 때)
     suspend fun productLocation(cacheDir: File, frame: Bitmap, productName: String)
             : ApiResponse<LocationSearchResult> {
-        val img = buildCurrentFramePart(cacheDir, frame) // 800x600, q=80
-        return api.searchProductLocation(img, productName).bodyOrThrow()
+        // JSON (Base64)
+        val b64 = frame.toBase64Jpeg(800, 600, 80)
+        val r1 = api.searchProductLocationJson(productName, mapOf("current_frame" to b64))
+        if (r1.isSuccessful) return r1.bodyOrThrow()
+
+        // 혹시 서버가 멀티파트만 허용한다면 폴백
+        val img = buildCurrentFramePart(cacheDir, frame)
+        val r2 = api.searchProductLocation(img, productName)
+        return r2.bodyOrThrow()
     }
 
-    // ============= NAV-001 =============
-    /** NAV-001: 현재 위치 이미지 1장 분석 (/api/v1/vision/ai/analyze) */
-    // AI-001: 멀티파트 유지
+    // AI-001: JSON 우선
     suspend fun navGuide(cacheDir: File, frame: Bitmap): VisionAnalyzeResponse {
+        val b64 = frame.toBase64Jpeg(800, 600, 80)  // 서버가 해상도 제한 없다면 800x600 유지로 충분
+        val r1 = api.navGuideJson(mapOf("file" to b64))
+        if (r1.isSuccessful) return r1.bodyOrThrow()
+
+        // 서버가 멀티파트 허용할 때를 대비한 폴백
         val part = buildNavImagePart(cacheDir, frame)
-        return api.navGuide(part).bodyOrThrow()
+        val r2 = api.navGuide(part)
+        return r2.bodyOrThrow()
     }
 
-    // (선택) 스웨거가 JSON만 받는 상황이면 임시로:
-    suspend fun navGuideJson(base64: String): VisionAnalyzeResponse {
-        return api.navGuideJson(mapOf("file" to base64)).bodyOrThrow()
-    }
 }
 
     /* ---------------- 공통 ---------------- */
