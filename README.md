@@ -13,3 +13,8 @@
 - Jenkins Webhook 설정 완전 검증
 - 시간: 2025-09-20 05:05
 
+**🔧 중복 빌드 문제 해결 테스트:**
+- Silent response 활성화로 중복 webhook 응답 최소화
+- GitLab MR/Push 시 단일 빌드 트리거 확인
+- 시간: 2025-09-20 05:15
+
