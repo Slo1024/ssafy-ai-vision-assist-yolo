@@ -28,15 +28,22 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/google").permitAll() // 로그인은 허용
-                        .requestMatchers("/api/test/**").permitAll() // 테스트 API는 인증 없이 허용
-                        .requestMatchers("/api/**").permitAll()
-                        .requestMatchers("/api/product/seven/drinks").permitAll() // product db API는 인증 없이 허용
-                        .requestMatchers("/api/v1/vision/**").permitAll() // Vision API는 인증 없이 허용
-                        .requestMatchers("/actuator/**").permitAll() // Actuator endpoints 허용
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll() // Swagger 허용
-//                        .requestMatchers("/api/**").authenticated() // 나머지 API는 인증 필요
-                        .anyRequest().permitAll()
+                        // 공개 API (인증 불필요)
+                        .requestMatchers("/api/auth/**").permitAll() // 로그인/인증 관련
+                        .requestMatchers("/api/test/**").permitAll() // 테스트 API
+                        .requestMatchers("/api/v1/allergy/search/**").permitAll() // 알레르기 검색
+                        .requestMatchers("/api/v1/vision/**").permitAll() // Vision API
+                        .requestMatchers("/api/product/seven/drinks").permitAll() // product db API
+                        .requestMatchers("/actuator/**").permitAll() // Actuator endpoints
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll() // Swagger
+
+                        // 인증 필요 API
+                        .requestMatchers("/api/v1/allergy").authenticated() // 내 알레르기 목록, 추가, 삭제
+                        .requestMatchers("/api/v1/carts/**").authenticated() // 장바구니 관련
+                        .requestMatchers("/api/v1/product/**").authenticated() // 상품 관련 (검색 제외)
+
+                        // 나머지는 인증 필요
+                        .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .userInfoEndpoint(userInfo -> userInfo
