@@ -16,7 +16,7 @@ fun AllergyScreen(
 ) {
     val state by vm.state.collectAsState()
     val pill = MaterialTheme.shapes.extraLarge
-    var pendingItem by remember { mutableStateOf<Int?>(null) }  // allergyId 임시 저장
+    var pendingItem by remember { mutableStateOf<Long?>(null) }  // allergyId 임시 저장
 
     Column(
         modifier = Modifier

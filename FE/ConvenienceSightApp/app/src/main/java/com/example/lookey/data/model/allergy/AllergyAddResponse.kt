@@ -10,6 +10,6 @@ data class AllergyPostRequest(
     val request: Request
 ) {
     data class Request(
-        val allergy_id: Int
+        val allergy_id: Long
     )
 }

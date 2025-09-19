@@ -2,6 +2,6 @@ package com.example.lookey.domain.entity
 
 
 data class Allergy(
-    val id: Int,
+    val id: Long,
     val name: String
 )

@@ -2,7 +2,7 @@
 package com.example.lookey.data.model.allergy
 
 data class AllergyNameDto(
-    val allergy_id: Int,
+    val allergy_id: Long,
     val name: String
 )
 
