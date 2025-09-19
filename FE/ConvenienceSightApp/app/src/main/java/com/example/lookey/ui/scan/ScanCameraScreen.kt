@@ -40,6 +40,9 @@ import kotlin.math.roundToInt
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusTarget
+import androidx.camera.view.PreviewView
+import android.graphics.Bitmap
+import com.example.lookey.data.network.Repository
 
 @Composable
 fun ScanCameraScreen(
@@ -61,19 +64,29 @@ fun ScanCameraScreen(
     val cartVm: CartViewModel = viewModel()
     val cartPort = remember(cartVm) { CartPortFromViewModel(cartVm) }
 
+
+    // 프리뷰 참조 저장
+    var previewRef by remember { mutableStateOf<PreviewView?>(null) }
+
+
+
     // ----- ScanViewModel DI -----
     val scanVm: ScanViewModel = viewModel(factory = object : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            // TalkBack 켜져 있으면 앱 TTS는 비활성(충돌 방지)
-            val safeSpeak: (String) -> Unit =
-                if (screenReaderOn) ({ _ -> })
-                else tts::speak
+            val safeSpeak: (String) -> Unit = if (screenReaderOn) ({ _ -> }) else tts::speak
+            // 팩토리 안에서
+            val cacheDir = context.cacheDir
+            val provider = { previewRef?.bitmap }
 
             return ScanViewModel(
                 speak = safeSpeak,
-                cart = cartPort
+                cart = cartPort,
+                repoNet = Repository(),
+                cacheDir = cacheDir,
+                frameProvider = provider
             ) as T
+
         }
     })
     val ui by scanVm.ui.collectAsState()
@@ -131,6 +144,7 @@ fun ScanCameraScreen(
                 minZoom = min
                 maxZoom = max
             },
+            onPreviewReady = { previewRef = it },
             modifier = Modifier.align(Alignment.TopCenter)
         ) {
             // 배너

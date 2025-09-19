@@ -44,6 +44,7 @@ fun CameraPreviewBox(
     cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA,
     zoomRatio: Float = 1.0f,
     onZoomCapabilities: ((minZoom: Float, maxZoom: Float) -> Unit)? = null,
+    onPreviewReady: ((PreviewView) -> Unit)? = null,
     modifier: Modifier = Modifier,
     overlay: @Composable (BoxScope.() -> Unit) = {}
 ) {
@@ -78,6 +79,11 @@ fun CameraPreviewBox(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { res -> hasPermission = (res[Manifest.permission.CAMERA] == true) }
 
+    // ⬇️ previewView를 밖으로 알려줌
+    LaunchedEffect(Unit) {
+        onPreviewReady?.invoke(previewView)
+    }
+
     LaunchedEffect(Unit) { launcher.launch(arrayOf(Manifest.permission.CAMERA)) }
 
     // CameraX 바인딩
@@ -109,6 +115,8 @@ fun CameraPreviewBox(
             onZoomCapabilities?.invoke(state.minZoomRatio, state.maxZoomRatio)
         }
     }
+
+    LaunchedEffect(previewView) { onPreviewReady?.invoke(previewView) }
 
     DisposableEffect(Unit) {
         val future = ProcessCameraProvider.getInstance(ctx)
