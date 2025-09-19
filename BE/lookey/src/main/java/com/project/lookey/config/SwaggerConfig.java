@@ -62,9 +62,9 @@ public class SwaggerConfig {
             );
         } else {
             return List.of(
-                    new Server().url("https://j13e101.p.ssafy.io/dev").description("Development Server"),
+                    new Server().url("http://j13e101.p.ssafy.io:8082").description("Development Server"),
                     new Server().url("http://localhost:8080").description("Local Development"),
-                    new Server().url("https://j13e101.p.ssafy.io").description("Production Server")
+                    new Server().url("http://j13e101.p.ssafy.io:8081").description("Production Server")
             );
         }
     }

@@ -5,6 +5,7 @@ import com.project.lookey.allergy.dto.AllergyListResponse;
 import com.project.lookey.allergy.dto.AllergyRemoveRequest;
 import com.project.lookey.allergy.dto.AllergySearchResponse;
 import com.project.lookey.allergy.service.AllergyService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
