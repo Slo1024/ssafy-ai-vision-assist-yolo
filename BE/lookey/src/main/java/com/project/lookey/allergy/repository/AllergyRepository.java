@@ -13,12 +13,12 @@ import java.util.List;
 public interface AllergyRepository extends JpaRepository<Allergy, Long> {
 
     @Query("""
-        SELECT new com.project.lookey.allergy.dto.AllergyListResponse$Item(
-            a.id, 
-            a.allergyList.id, 
+        SELECT new com.project.lookey.allergy.dto.AllergyListResponse.Item(
+            a.id,
+            a.allergyList.id,
             a.allergyList.name
         )
-        FROM Allergy a 
+        FROM Allergy a
         WHERE a.user.id = :userId
         ORDER BY a.createdAt DESC
     """)

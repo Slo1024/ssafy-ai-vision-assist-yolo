@@ -74,13 +74,13 @@ class AllergyViewModel(
 
 
 
-    fun add(allergyId: Int) = viewModelScope.launch {
+    fun add(allergyId: Long) = viewModelScope.launch {
         runCatching { repo.add(allergyId) }
             .onSuccess { load() }
             .onFailure { e -> _state.update { it.copy(message = cleanMsg(e)) } }
     }
 
-    fun delete(allergyId: Int) = viewModelScope.launch {
+    fun delete(allergyId: Long) = viewModelScope.launch {
         val before = _state.value.myAllergies
         _state.update { it.copy(myAllergies = before.filterNot { a -> a.id == allergyId }) }
         runCatching { repo.delete(allergyId) }

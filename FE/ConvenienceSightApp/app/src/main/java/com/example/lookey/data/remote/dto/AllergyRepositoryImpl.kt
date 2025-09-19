@@ -44,7 +44,7 @@ class AllergyRepositoryImpl(
     return body.result?.items.orEmpty().map { Allergy(it.id, it.name) }
     }
 
-    override suspend fun add(allergyId: Int) {
+    override suspend fun add(allergyId: Long) {
         val res = api.addAllergy(
             AllergyPostRequest(
                 request = AllergyPostRequest.Request(allergy_id = allergyId)
@@ -56,7 +56,7 @@ class AllergyRepositoryImpl(
         // result: 항상 null → 처리 없음
     }
 
-    override suspend fun delete(allergyId: Int) {
+    override suspend fun delete(allergyId: Long) {
         val res = api.deleteAllergy(AllergyDeleteRequest(allergyId))
         val body = ensureSuccess(res)
 

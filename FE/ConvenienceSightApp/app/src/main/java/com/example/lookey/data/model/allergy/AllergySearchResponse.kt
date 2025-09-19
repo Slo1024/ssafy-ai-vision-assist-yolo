@@ -11,7 +11,7 @@ data class AllergySearchResult(
 )
 
 data class AllergySearchItem(
-    val id: Int,
+    val id: Long,
     val name: String
 )
 
