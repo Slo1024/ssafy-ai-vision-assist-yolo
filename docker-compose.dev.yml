@@ -1,6 +1,6 @@
 networks:
   shared-network:
-    driver: bridge
+    external: true  # Use existing shared network for AI service communication
 
 services:
   mysql-shared:
