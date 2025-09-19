@@ -7,3 +7,9 @@
 - 실제 GitLab Push 테스트 진행
 - 시간: 2025-09-20 05:00
 
+**🔀 MR 트리거 테스트:**
+- feature/PJT/webhook-mr-test 브랜치 생성
+- MR 생성 시 자동 빌드 트리거 테스트
+- Jenkins Webhook 설정 완전 검증
+- 시간: 2025-09-20 05:05
+
