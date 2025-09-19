@@ -151,7 +151,7 @@ pipeline {
 
                         // Deploy backend services
                         sh "docker compose -f ${DOCKER_COMPOSE_FILE} down || true"
-                        sh "docker compose -f ${DOCKER_COMPOSE_FILE} build --no-cache"
+                        sh "docker compose -f ${DOCKER_COMPOSE_FILE} build --parallel"
                         sh "docker compose -f ${DOCKER_COMPOSE_FILE} up -d"
 
                         // Deploy AI service
@@ -165,7 +165,7 @@ pipeline {
                             docker compose -f docker-compose.ai.yml down || true
 
                             # Build and deploy
-                            docker compose -f docker-compose.ai.yml build --no-cache
+                            docker compose -f docker-compose.ai.yml build --parallel
                             docker compose -f docker-compose.ai.yml up -d
                         """
                     }
