@@ -43,6 +43,10 @@ import androidx.compose.ui.focus.focusTarget
 import androidx.camera.view.PreviewView
 import android.graphics.Bitmap
 import com.example.lookey.data.network.Repository
+import com.example.lookey.data.network.CartRepository
+import com.example.lookey.data.network.RetrofitClient
+import com.example.lookey.ui.viewmodel.CartViewModelFactory
+
 
 @Composable
 fun ScanCameraScreen(
@@ -61,7 +65,13 @@ fun ScanCameraScreen(
     }
 
     // ----- Cart 포트 -----
-    val cartVm: CartViewModel = viewModel()
+    val cartVm: CartViewModel = viewModel(
+        factory = remember {
+            // CartRepository 생성자에 맞춰 한 줄 선택해서 쓰세요.
+            CartViewModelFactory(CartRepository(RetrofitClient.apiService))
+            // CartViewModelFactory(CartRepository(RetrofitClient.apiService))
+        }
+    )
     val cartPort = remember(cartVm) { CartPortFromViewModel(cartVm) }
 
 
