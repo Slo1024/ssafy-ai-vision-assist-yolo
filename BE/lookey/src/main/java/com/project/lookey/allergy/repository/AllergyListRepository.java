@@ -13,7 +13,7 @@ import java.util.Optional;
 public interface AllergyListRepository extends JpaRepository<AllergyList, Long> {
 
     @Query("""
-        SELECT new com.project.lookey.allergy.dto.AllergySearchResponse.Item(
+        SELECT new com.project.lookey.allergy.dto.AllergySearchItem(
             al.id,
             al.name
         )
@@ -21,7 +21,7 @@ public interface AllergyListRepository extends JpaRepository<AllergyList, Long> 
         WHERE al.name LIKE CONCAT('%', :keyword, '%')
         ORDER BY al.name
     """)
-    List<com.project.lookey.allergy.dto.AllergySearchResponse.Item> findNamesByKeyword(@Param("keyword") String keyword);
+    List<com.project.lookey.allergy.dto.AllergySearchItem> findNamesByKeyword(@Param("keyword") String keyword);
 
     Optional<AllergyList> findByName(String name);
 }

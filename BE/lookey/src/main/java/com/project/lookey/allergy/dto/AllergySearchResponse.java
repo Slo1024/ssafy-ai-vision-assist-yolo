@@ -3,11 +3,6 @@ package com.project.lookey.allergy.dto;
 import java.util.List;
 
 public record AllergySearchResponse(
-    List<Item> items
+    List<AllergySearchItem> items
 ) {
-    public record Item(
-        Long id,
-        String name
-    ) {
-    }
 }
