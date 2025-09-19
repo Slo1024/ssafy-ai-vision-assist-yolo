@@ -156,9 +156,18 @@ pipeline {
 
                         // Deploy AI service
                         echo "Deploying AI service..."
-                        sh "docker compose -f docker-compose.ai.yml down || true"
-                        sh "docker compose -f docker-compose.ai.yml build --no-cache"
-                        sh "docker compose -f docker-compose.ai.yml up -d"
+                        sh """
+                            # Stop and remove existing AI container
+                            docker stop lookey-ai-service || true
+                            docker rm lookey-ai-service || true
+
+                            # Clean up any orphaned containers
+                            docker compose -f docker-compose.ai.yml down || true
+
+                            # Build and deploy
+                            docker compose -f docker-compose.ai.yml build --no-cache
+                            docker compose -f docker-compose.ai.yml up -d
+                        """
                     }
                 }
             }
