@@ -31,6 +31,14 @@ private fun Bitmap.compressToJpegFile(tmpDir: File, name: String): File {
     return file
 }
 
+// NAV-001: name="image"
+fun buildNavImagePart(cacheDir: File, bmp: Bitmap): MultipartBody.Part {
+    val f = bmp.compressToJpegFile(cacheDir, "nav_image")
+    return MultipartBody.Part.createFormData("image", f.name, f.asRequestBody(JPEG))
+}
+
+
+
 // PRODUCT-005: "shelf_images" 4장 파트 생성
 fun buildShelfImageParts(cacheDir: File, bitmaps: List<Bitmap>): List<MultipartBody.Part> {
     require(bitmaps.size == 4) { "shelf_images must be exactly 4 images" }

@@ -8,10 +8,12 @@ import com.example.lookey.domain.entity.DetectResult
 import com.example.lookey.ui.cart.CartPort
 import com.example.lookey.ui.scan.ResultFormatter
 import com.example.lookey.data.network.Repository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -54,13 +56,19 @@ class ScanViewModel(
 
         // (옵션) 텍스트 안내 루프
         val guideMsg: String? = null,
-        val guideTicking: Boolean = false
+        val guideTicking: Boolean = false,
+
+        // 길 안내 표시용
+        val navSummary: String? = null,
+        val navActions: List<String> = emptyList()
     )
 
     private val _ui = MutableStateFlow(UiState())
     val ui: StateFlow<UiState> = _ui
 
     private var lastSpokenId: String? = null
+    private var guideJob: Job? = null
+    private var lastNavHint: String? = null
 
     fun setMode(mode: Mode) {
         _ui.update {
@@ -70,7 +78,46 @@ class ScanViewModel(
                 capturing = false
             )
         }
+        if (mode == Mode.GUIDE) startGuideLoop() else stopGuideLoop()
     }
+
+
+
+    /** NAV-001: 1초 폴링 루프 */
+    private fun startGuideLoop() {
+        if (guideJob?.isActive == true) return
+        guideJob = viewModelScope.launch {
+            speak("길 안내를 시작합니다. 카메라를 천천히 움직여 주세요.")
+            while (isActive && _ui.value.mode == Mode.GUIDE) {
+                val frame = frameProvider?.invoke()
+                if (frame != null) {
+                    val res = runCatching { repoNet.navGuide(cacheDir, frame) }.getOrNull()
+                    val result = res?.result
+                    val hint = result?.ttsHint ?: result?.summary
+                    // 화면 갱신
+                    _ui.update {
+                        it.copy(
+                            navSummary = result?.summary,
+                            navActions = result?.actions ?: emptyList()
+                        )
+                    }
+                    // 바뀌었을 때만 읽기
+                    if (!hint.isNullOrBlank() && hint != lastNavHint) {
+                        speak(hint)
+                        lastNavHint = hint
+                    }
+                }
+                delay(1000)
+            }
+        }
+    }
+
+    private fun stopGuideLoop() {
+        guideJob?.cancel()
+        lastNavHint = null
+        _ui.update { it.copy(navSummary = null, navActions = emptyList()) }
+    }
+
 
     /** 005: 4장 캡처 → 서버 호출 → 큐/모달 세팅 */
     fun startPanorama() {
@@ -249,6 +296,40 @@ class ScanViewModel(
         _ui.update { it.copy(capturedFrames = it.capturedFrames + placeholder) }
     }
 
+
+
+    fun guideAnalyzeOnce() {
+        // frameProvider/cachedDir는 기존에 주입되어 있다고 가정
+        if (frameProvider == null) return
+        viewModelScope.launch {
+            val bmp = frameProvider.invoke() ?: return@launch
+            runCatching {
+                repoNet.analyzeVisionAi(cacheDir, bmp)
+            }.onSuccess { res ->
+                // 간단 TTS 생성
+                val dir = res.data.directions
+                val obs = res.data.obstacles
+                val pieces = mutableListOf<String>()
+                if (dir.front) pieces += "앞으로 이동 가능"
+                if (dir.left)  pieces += "좌측 이동 가능"
+                if (dir.right) pieces += "우측 이동 가능"
+                if (obs.front) pieces += "정면에 장애물"
+                if (obs.left)  pieces += "좌측 장애물"
+                if (obs.right) pieces += "우측 장애물"
+                if (res.data.counter) pieces += "계산대가 보입니다"
+                if (res.data.people.front || res.data.people.left || res.data.people.right)
+                    pieces += "주변에 사람이 있습니다"
+
+                val msg = if (pieces.isEmpty()) "이동 정보를 파악하지 못했습니다." else pieces.joinToString(". ") + "."
+                speak(msg)
+
+                // 필요하면 UI 상태에도 반영
+                _ui.update { it.copy(guideMsg = msg, guideTicking = false) }
+            }
+        }
+    }
+
+
     fun clearCapturedFrames() { _ui.update { it.copy(capturedFrames = emptyList()) } }
 
     fun onDetected(result: DetectResult) {
@@ -283,7 +364,7 @@ class ScanViewModel(
         "위" -> DirectionBucket.UP
         "오른쪽위" -> DirectionBucket.RIGHT_UP
         "왼쪽" -> DirectionBucket.LEFT
-        "가운데" -> DirectionBucket.CENTER
+        "가운데", "중간" -> DirectionBucket.CENTER
         "오른쪽" -> DirectionBucket.RIGHT
         "왼쪽아래" -> DirectionBucket.LEFT_DOWN
         "아래" -> DirectionBucket.DOWN
