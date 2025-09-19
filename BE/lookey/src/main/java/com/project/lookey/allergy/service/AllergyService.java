@@ -27,8 +27,15 @@ public class AllergyService {
     private final UserRepository userRepository;
 
     public AllergyListResponse getMyAllergies(Integer userId) {
-        var rows = allergyRepository.findRowsByUserId(userId);
-        return new AllergyListResponse(rows);
+        var allergies = allergyRepository.findByUser_IdOrderByCreatedAtDesc(userId);
+        var items = allergies.stream()
+                .map(allergy -> new com.project.lookey.allergy.dto.AllergyListResponse.Item(
+                        allergy.getId(),
+                        allergy.getAllergyList().getId(),
+                        allergy.getAllergyList().getName()
+                ))
+                .collect(java.util.stream.Collectors.toList());
+        return new AllergyListResponse(items);
     }
 
     public AllergySearchResponse searchAllergies(String keyword) {
@@ -62,7 +69,7 @@ public class AllergyService {
 
     @Transactional
     public void removeAllergy(Integer userId, AllergyRemoveRequest req) {
-        int affected = allergyRepository.deleteByUserIdAndAllergyListId(userId, req.allergyId());
+        int affected = allergyRepository.deleteByUser_IdAndAllergyList_Id(userId, req.allergyId());
         if (affected == 0) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "알레르기 항목을 찾을 수 없습니다.");
         }
