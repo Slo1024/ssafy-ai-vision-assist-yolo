@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.lookey.domain.entity.DetectResult
+import com.example.lookey.ui.cart.CartPort
 import com.example.lookey.ui.scan.ResultFormatter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,9 +15,7 @@ import kotlin.random.Random
 
 class ScanViewModel(
     private val speak: (String) -> Unit = {},
-    private val isInCart: (String) -> Boolean = { false },
-    private val removeFromCart: (String) -> Unit = {},                 // id 또는 name 키로 처리하도록 구현부에서 매핑
-    private val getCartNames: () -> List<String> = { emptyList() }     // 장바구니 상품명 리스트 제공자(스텁)
+    private val cart: CartPort? = null   // ✅ CartPort 하나만 주입
 ) : ViewModel() {
 
     enum class Mode { SCAN, GUIDE }
@@ -51,7 +50,7 @@ class ScanViewModel(
 
         // 위치 안내(006 흐름)
         val guiding: Boolean = false,                   // 1초 루프 On
-        val guideDirection: DirectionBucket? = null,    // 최근 방향 버킷 표시(보이스 안내 위주)
+        val guideDirection: DirectionBucket? = null,    // 최근 방향 버킷
 
         // 길 안내(별개 축)
         val guideMsg: String? = null,
@@ -121,11 +120,11 @@ class ScanViewModel(
 
     /** 스텁: 005 응답 대체 — 장바구니 목록 일부를 ‘매칭’된 것으로 간주 */
     private fun stubCheckShelfForCartItems(frames: List<Bitmap>): List<String> {
-        val cart = getCartNames()
-        if (frames.isEmpty() || cart.isEmpty()) return emptyList()
+        val names = cart?.namesSnapshot().orEmpty()
+        if (frames.isEmpty() || names.isEmpty()) return emptyList()
         // 데모: 1~3개 랜덤 매칭
-        val count = Random.nextInt(1, minOf(3, cart.size) + 1)
-        return cart.shuffled().take(count)
+        val count = Random.nextInt(1, minOf(3, names.size) + 1)
+        return names.shuffled().take(count)
     }
 
     /** 모달: “예” → 006 흐름 시작(방향→단일 인식→정보 배너→장바구니 제거→다음으로) */
@@ -171,8 +170,9 @@ class ScanViewModel(
                     guideDirection = null
                 )
             }
+
             // 장바구니에서 제거
-            removeFromCart(info.id)  // 이름을 키로 쓰는 구현이면 그대로 동작
+            //cart?.remove(info.id)
 
             // 다음 타겟으로 진행
             proceedToNextCartTarget()
@@ -223,5 +223,27 @@ class ScanViewModel(
 
     fun clearBanner() {
         _ui.update { it.copy(banner = null) }
+    }
+
+
+    fun debugShowBannerSample() {
+        _ui.update {
+            it.copy(
+                banner = ResultFormatter.Banner(
+                    type = ResultFormatter.Banner.Type.INFO,
+                    text = "먹태깡 청양마요 맛 | 1,700원 | 2+1 행사품입니다."
+                )
+            )
+        }
+    }
+
+    /** 장바구니 여부와 무관하게 모달만 강제로 띄우기 */
+    fun debugShowCartGuideModalSample(name: String = "코카콜라 제로 500ml") {
+        _ui.update {
+            it.copy(
+                cartGuideTargetName = name,
+                showCartGuideModal = true
+            )
+        }
     }
 }

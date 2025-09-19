@@ -14,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -31,7 +32,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun HomeScreen(
     tts: TtsController,
-    userName: String? = null,
+    userNameState: MutableState<String>,
     onAllergy: () -> Unit = {},
     onFindStore: () -> Unit = {},
     onFindProduct: () -> Unit = {},
@@ -94,7 +95,7 @@ fun HomeScreen(
         // 인사 문구 (2칸 차지)
         item(span = { GridItemSpan(maxLineSpan) }) {
             Text(
-                text = "${userName ?: "사용자"}님,\n안녕하세요!",
+                text = "${userNameState.value}님, \n안녕하세요",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 lineHeight = 45.sp,
@@ -102,6 +103,7 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .padding(bottom = 20.dp)
             )
+
             Spacer(Modifier.height(10.dp))
         }
 

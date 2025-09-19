@@ -17,7 +17,8 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 
 @Composable
-fun IntroRoute(navController: NavHostController) {
+fun IntroRoute(navController: NavHostController,
+               userNameState: androidx.compose.runtime.MutableState<String>) {
     val context = LocalContext.current
     val authViewModel: AuthViewModel = viewModel()
     val tts = remember { TtsController(context) }
@@ -80,6 +81,7 @@ fun IntroRoute(navController: NavHostController) {
         onSignedIn = {
             launcher.launch(googleSignInClient.signInIntent)
         },
-        tts = tts
+        tts = tts,
+        userNameState = userNameState
     )
 }

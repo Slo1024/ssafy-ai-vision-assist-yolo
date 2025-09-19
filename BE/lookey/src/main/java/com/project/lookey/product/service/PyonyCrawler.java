@@ -173,7 +173,7 @@ public class PyonyCrawler {
         // 1. 회사명 제거 (농심), 롯데) 등)
         cleaned = cleaned.replaceAll("^[^)]+\\)\\s*", "");
 
-        // 2. 연속된 공백 정리
+        // 2. 모든 공백 정리
         // cleaned = cleaned.replaceAll("\\s{2,}", " ").trim();
         cleaned = cleaned.replaceAll("\\s+", "");
         

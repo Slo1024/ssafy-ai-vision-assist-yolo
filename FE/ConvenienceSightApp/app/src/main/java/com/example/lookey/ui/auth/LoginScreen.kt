@@ -30,11 +30,15 @@ import com.google.android.gms.common.api.ApiException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+
 
 @Composable
 fun LoginScreen(
     onSignedIn: () -> Unit,
     tts: TtsController,
+    userNameState: MutableState<String>,
     @DrawableRes logoResId: Int = R.drawable.lookey,
     @DrawableRes googleIconResId: Int = R.drawable.ic_google_logo,
     showSkip: Boolean = BuildConfig.SHOW_LOGIN_SKIP
@@ -59,8 +63,9 @@ fun LoginScreen(
             Log.d("GoogleLogin", "idToken: $idToken")
 
             if (!idToken.isNullOrEmpty()) {
-                tts.speak("${account.displayName ?: "사용자"}님, 로그인되었습니다.")
-                sendIdTokenToServer(context, idToken, onSignedIn)
+                val displayName = account.displayName ?: "사용자"
+                tts.speak("$displayName 님, 로그인되었습니다.")
+                sendIdTokenToServer(context, idToken, displayName, userNameState, onSignedIn)
             } else {
                 tts.speak("idToken을 가져오지 못했습니다.")
             }
@@ -70,15 +75,21 @@ fun LoginScreen(
         }
     }
 
-    // 이미 로그인되어 있으면 자동 진행
+    // 자동 로그인 체크
     LaunchedEffect(Unit) {
-        GoogleSignIn.getLastSignedInAccount(context)?.let {
+        val appContext = context.applicationContext
+        val jwt = PrefUtil.getJwtToken(appContext)
+        val userId = PrefUtil.getUserId(appContext)
+
+        if (!jwt.isNullOrEmpty() && userId != null) {
             tts.speak("이미 로그인되어 있습니다.")
             onSignedIn()
-        } ?: run {
+        } else {
             tts.speak("로그인 화면입니다. 구글로 시작하기 버튼을 누르세요.")
+            // 필요하면 GoogleSignIn.getLastSignedInAccount(context)?.signOut()도 호출
         }
     }
+
 
     // UI
     Box(
@@ -136,24 +147,49 @@ fun LoginScreen(
     }
 }
 
+
 private fun sendIdTokenToServer(
     context: Context,
     idToken: String,
+    displayName: String,
+    userNameState: MutableState<String>,
     onSignedIn: () -> Unit
 ) {
     CoroutineScope(Dispatchers.IO).launch {
         try {
             val response = RetrofitClient.apiService.googleLogin("Bearer $idToken")
+
+            Log.d("LoginScreen", "Server Response code=${response.code()}, message=${response.message()}")
+            Log.d("LoginScreen", "Response body=${response.body()}")
+
             if (response.isSuccessful) {
-                val jwt = response.body()?.data?.jwtToken
-                val userId = response.body()?.data?.userId
+                val data = response.body()?.data
+
+                Log.d("LoginScreen", "server data: $data")
+                Log.d("LoginScreen", "server userName: ${data?.userName}") // ✅ userName만 사용
+
+                val jwt = data?.jwtToken
+                val userId = data?.userId
+                val serverName = data?.userName
+
+                // 서버가 userName을 안 보내면 Google 계정 이름 사용
+                val finalName = serverName ?: displayName
+
                 if (!jwt.isNullOrEmpty() && userId != null) {
+                    val appContext = context.applicationContext
                     TokenProvider.token = jwt
-                    PrefUtil.saveUserId(context, userId.toString())
+                    PrefUtil.saveUserId(appContext, userId.toString())
+                    PrefUtil.saveUserName(context, finalName)
+                    Log.d("PrefDebug", "Saved userName: ${PrefUtil.getUserName(context)}")
+                    PrefUtil.saveJwtToken(appContext, jwt)
+
+                    // userNameState 업데이트
                     CoroutineScope(Dispatchers.Main).launch {
+                        userNameState.value = finalName
                         onSignedIn()
                     }
-                } else {
+                }
+                else {
                     Log.e("LoginScreen", "JWT 또는 userId가 비어있습니다.")
                 }
             } else {
@@ -164,3 +200,4 @@ private fun sendIdTokenToServer(
         }
     }
 }
+

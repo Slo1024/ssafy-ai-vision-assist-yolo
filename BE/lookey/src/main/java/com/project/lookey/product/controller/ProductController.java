@@ -8,18 +8,20 @@ import com.project.lookey.product.service.AiSearchService;
 import com.project.lookey.product.service.PyonyCrawler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/product")
+@RequestMapping("/api/v1/product")
 public class ProductController {
     private final PyonyCrawler crawler;
     private final CartService cartService;
@@ -32,41 +34,56 @@ public class ProductController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/search")
+    @PostMapping(value = "/search", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> searchShelf(
             @AuthenticationPrincipal(expression = "userId") Integer userId,
-            @RequestParam("shelf_images") MultipartFile[] shelfImages
+            @RequestPart("shelf_images") List<MultipartFile> shelfImages
     ) {
-        // 이미지 4장 검증
-        if (shelfImages == null || shelfImages.length != 4) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "정확히 4장의 이미지가 필요합니다.");
-        }
-
-        // 이미지 파일 형식 검증
-        for (MultipartFile image : shelfImages) {
-            if (image.isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "빈 파일이 포함되어 있습니다.");
+        try {
+            // 이미지 4장 검증
+            if (shelfImages == null || shelfImages.size() != 4) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "정확히 4장의 이미지가 필요합니다. 현재: " + (shelfImages != null ? shelfImages.size() : "null") + "개");
             }
-            String contentType = image.getContentType();
-            if (contentType == null || (!contentType.equals("image/jpeg") && !contentType.equals("image/png"))) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "JPG 또는 PNG 파일만 허용됩니다.");
+
+            // 이미지 파일 형식 검증
+            for (int i = 0; i < shelfImages.size(); i++) {
+                MultipartFile image = shelfImages.get(i);
+                if (image.isEmpty()) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "빈 파일이 포함되어 있습니다. 이미지 " + (i+1) + "번째");
+                }
+                String contentType = image.getContentType();
+                if (contentType == null || !contentType.equals("image/jpeg")) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "JPEG 파일만 허용됩니다. 이미지 " + (i+1) + "번째 파일형식: " + contentType);
+                }
             }
+
+            // 사용자 장바구니 상품명 목록 조회
+            List<String> cartProductNames = cartService.getCartProductNames(userId);
+
+            // List를 배열로 변환하여 AI 서비스 호출
+            MultipartFile[] imageArray = shelfImages.toArray(new MultipartFile[0]);
+            List<String> matchedNames = aiSearchService.findMatchedProducts(imageArray, cartProductNames);
+
+            // 응답 생성
+            MatchCartResponse.Result result = new MatchCartResponse.Result(matchedNames.size(), matchedNames);
+            return ResponseEntity.ok(Map.of(
+                    "status", 200,
+                    "message", "매대에서 장바구니 상품 확인 완료",
+                    "result", result
+            ));
+
+        } catch (ResponseStatusException e) {
+            // 이미 적절한 에러 메시지가 있는 경우 그대로 던짐
+            throw e;
+        } catch (Exception e) {
+            // 예상치 못한 에러의 경우 상세 정보 포함
+            String detailedError = "서버 오류: " + e.getClass().getSimpleName() + " - " + e.getMessage() +
+                                  " (userId: " + userId + ", 이미지: " + (shelfImages != null ? shelfImages.size() : "null") + "개)";
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, detailedError);
         }
-
-        // 사용자 장바구니 상품명 목록 조회
-        List<String> cartProductNames = cartService.getCartProductNames(userId);
-
-        // AI 서비스로 매칭된 상품명 조회
-        List<String> matchedNames = aiSearchService.findMatchedProducts(shelfImages, cartProductNames);
-
-        // 응답 생성
-        MatchCartResponse.Result result = new MatchCartResponse.Result(matchedNames.size(), matchedNames);
-        
-        return ResponseEntity.ok(Map.of(
-                "status", 200,
-                "message", "매대에서 장바구니 상품 확인 완료",
-                "result", result
-        ));
     }
 
     @PostMapping("/search/location")
@@ -81,8 +98,8 @@ public class ProductController {
         }
 
         String contentType = currentFrame.getContentType();
-        if (contentType == null || (!contentType.equals("image/jpeg") && !contentType.equals("image/png"))) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "JPG 또는 PNG 파일만 허용됩니다.");
+        if (contentType == null || !contentType.equals("image/jpeg")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "JPEG 파일만 허용됩니다.");
         }
 
         // 상품명 검증
