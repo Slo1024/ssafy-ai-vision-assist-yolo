@@ -2,12 +2,14 @@
 package com.example.lookey.ui.viewmodel
 
 import android.graphics.Bitmap
+import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.lookey.domain.entity.DetectResult
 import com.example.lookey.ui.cart.CartPort
 import com.example.lookey.ui.scan.ResultFormatter
 import com.example.lookey.data.network.Repository
+import com.example.lookey.data.remote.dto.navigation.VisionAnalyzeResponse
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,7 +30,7 @@ class ScanViewModel(
 
     enum class Mode { SCAN, GUIDE }
 
-    /** 9방향 버킷 */
+    /** 9방향 버킷 (006용 읽어주기 문구) */
     enum class DirectionBucket(val label: String) {
         LEFT_UP("왼쪽 위"), UP("위"), RIGHT_UP("오른쪽 위"),
         LEFT("왼쪽"), CENTER("가운데"), RIGHT("오른쪽"),
@@ -42,7 +44,7 @@ class ScanViewModel(
         val current: DetectResult? = null,
         val banner: ResultFormatter.Banner? = null,
 
-        // 005 파노라마 캡처
+        // 005
         val capturedFrames: List<Bitmap> = emptyList(),
 
         // 장바구니 순차 안내
@@ -50,11 +52,11 @@ class ScanViewModel(
         val cartGuideTargetName: String? = null,
         val showCartGuideModal: Boolean = false,
 
-        // 006 위치 안내
+        // 006
         val guiding: Boolean = false,
         val guideDirection: DirectionBucket? = null,
 
-        // 길 안내 표시용
+        // NAV-001 (길 안내)
         val navSummary: String? = null,
         val navActions: List<String> = emptyList()
     )
@@ -65,6 +67,9 @@ class ScanViewModel(
     private var lastSpokenId: String? = null
     private var guideJob: Job? = null
     private var lastNavHint: String? = null
+
+    // 006 API 호출 지연용(TTS가 끝났다고 가정 후 1.2초 쿨다운)
+    private var ttsCooldownUntilMs: Long = 0L
 
     fun setMode(mode: Mode) {
         _ui.update {
@@ -77,9 +82,9 @@ class ScanViewModel(
         if (mode == Mode.GUIDE) startGuideLoop() else stopGuideLoop()
     }
 
-
-
-    /** NAV-001: 1초 폴링 루프 */
+    // ----------------------------------------
+    // NAV-001: 1초 폴링 루프 (새 스펙 data 매핑)
+    // ----------------------------------------
     private fun startGuideLoop() {
         if (guideJob?.isActive == true) return
         guideJob = viewModelScope.launch {
@@ -87,17 +92,17 @@ class ScanViewModel(
             while (isActive && _ui.value.mode == Mode.GUIDE) {
                 val frame = frameProvider?.invoke()
                 if (frame != null) {
-                    val res = runCatching { repoNet.navGuide(cacheDir, frame) }.getOrNull()
-                    val result = res?.result
-                    val hint = result?.ttsHint ?: result?.summary
-                    // 화면 갱신
+                    val resp = runCatching { repoNet.navGuide(cacheDir, frame) }.getOrNull()
+                    val ui = resp?.toNavUi()
+
                     _ui.update {
                         it.copy(
-                            navSummary = result?.summary,
-                            navActions = result?.actions ?: emptyList()
+                            navSummary = ui?.summary,
+                            navActions = ui?.actions ?: emptyList()
                         )
                     }
-                    // 바뀌었을 때만 읽기
+
+                    val hint = ui?.ttsHint
                     if (!hint.isNullOrBlank() && hint != lastNavHint) {
                         speak(hint)
                         lastNavHint = hint
@@ -114,8 +119,62 @@ class ScanViewModel(
         _ui.update { it.copy(navSummary = null, navActions = emptyList()) }
     }
 
+    /** NAV 응답 → UI용 요약/액션/음성 힌트 매핑 */
+    private data class NavUi(val summary: String?, val actions: List<String>, val ttsHint: String?)
 
-    // 005: 1장 캡처 → 서버 호출 → 결과 반영
+    private fun VisionAnalyzeResponse.toNavUi(): NavUi? {
+        val d = data ?: return NavUi(null, emptyList(), null)
+
+        // 이동 가능 방향
+        val goList = buildList {
+            if (d.directions.left) add("왼쪽")
+            if (d.directions.front) add("정면")
+            if (d.directions.right) add("오른쪽")
+        }
+        val goSummary = if (goList.isEmpty()) "이동 가능한 방향이 없습니다."
+        else "이동 가능: ${goList.joinToString(", ")}"
+
+        fun tri(label: String, l: Boolean, f: Boolean, r: Boolean): String? {
+            val where = buildList {
+                if (l) add("왼쪽")
+                if (f) add("정면")
+                if (r) add("오른쪽")
+            }
+            return if (where.isEmpty()) null else "$label: ${where.joinToString(", ")}"
+        }
+
+        val peopleMsg = tri("사람 감지", d.people.left, d.people.front, d.people.right)
+        val obsMsg    = tri("장애물", d.obstacles.left, d.obstacles.front, d.obstacles.right)
+
+        val actions = buildList {
+            if (d.directions.left) add("왼쪽으로 이동")
+            if (d.directions.front) add("앞으로 이동")
+            if (d.directions.right) add("오른쪽으로 이동")
+            if (d.counter) add("계산대 방향")
+            if (!d.category.isNullOrBlank()) add("현재 구역: ${d.category}")
+            if (peopleMsg != null) add(peopleMsg)
+            if (obsMsg != null) add(obsMsg)
+        }
+
+        val caution = when {
+            d.people.front || d.obstacles.front -> "정면 주의"
+            else -> null
+        }
+        val goTts = when {
+            d.directions.front -> "앞으로 이동 가능합니다"
+            d.directions.right -> "오른쪽으로 이동 가능합니다"
+            d.directions.left  -> "왼쪽으로 이동 가능합니다"
+            else               -> "이동 가능한 방향이 없습니다"
+        }
+        val tts = listOfNotNull(caution, goTts).joinToString(". ")
+
+        val summary = listOfNotNull(goSummary, if (d.counter) "계산대 감지" else null).joinToString(" | ")
+        return NavUi(summary = summary, actions = actions, ttsHint = tts)
+    }
+
+    // ----------------------------------------
+    // PRODUCT-005: 1장 업로드 → 서버 호출 → 큐/모달
+    // ----------------------------------------
     fun startPanorama() {
         if (_ui.value.mode != Mode.SCAN) return
 
@@ -140,8 +199,8 @@ class ScanViewModel(
 
             val res = runCatching { repoNet.productShelfSearch(cacheDir, frame) }.getOrNull()
 
-            // 3초 뒤 일반 모드로 복귀 (UI 연출)
-            kotlinx.coroutines.delay(3000)
+            // UI 연출: 광각 → 일반 복귀
+            delay(3000)
             _ui.update { it.copy(capturing = false, scanning = false) }
 
             res?.let {
@@ -158,79 +217,80 @@ class ScanViewModel(
                         showCartGuideModal = (next != null)
                     )
                 }
-            } ?: kotlin.run {
+            } ?: run {
                 println("PRODUCT-005 failed or null response")
             }
         }
     }
 
-
-    /** 모달: “예” → 006 시작 */
+    // ----------------------------------------
+    // PRODUCT-006: 상대 위치 → 단일 인식
+    //  - 음성 안내가 나갈 때는 API 호출 금지 (TTS 후 1.2초 대기)
+    // ----------------------------------------
     fun onCartGuideConfirm() {
         val target = _ui.value.cartGuideTargetName ?: return
         _ui.update { it.copy(showCartGuideModal = false, guiding = true, guideDirection = null) }
         start006Loop(target)
     }
 
-    /** 모달: “아니요” → 다음 타겟 */
     fun onCartGuideSkip() {
         proceedToNextCartTarget()
     }
 
-    /** 006: 프레임 전송 폴링 → 방향 or 단일 인식 */
     private fun start006Loop(targetName: String) {
         viewModelScope.launch {
             if (frameProvider == null) return@launch start006StubOnce(targetName)
 
             repeat(4) {
+                // 🔒 TTS 쿨다운 동안은 호출 지연
+                val now = SystemClock.elapsedRealtime()
+                if (now < ttsCooldownUntilMs) {
+                    delay(ttsCooldownUntilMs - now + 50)
+                }
+
                 val frame = frameProvider.invoke() ?: return@repeat
                 val res = runCatching {
-                    repoNet.productLocation(cacheDir, frame, targetName) // ✅ 실제 호출
+                    repoNet.productLocation(cacheDir, frame, targetName)
                 }.getOrNull()
 
-                when (res?.result?.caseType) {                          // ✅ dto의 필드명에 맞춤
+                when (res?.result?.caseType) {
                     "DIRECTION" -> {
                         val dir = res.result.target?.directionBucket?.toDirectionBucketOrNull()
                         _ui.update { it.copy(guideDirection = dir) }
-                        if (dir != null) speak("$targetName 이(가) ${dir.label}에 있습니다.")
-                        delay(800)
+                        if (dir != null) {
+                            speak("$targetName 이(가) ${dir.label}에 있습니다.")
+                            // 🕒 안내 음성 후 1.2초 동안 추가 호출 금지
+                            ttsCooldownUntilMs = SystemClock.elapsedRealtime() + 1200L
+                        }
+                        delay(200) // 살짝 텀
                     }
                     "SINGLE_RECOGNIZED" -> {
                         val info = res.result.info
-                        val banner = ResultFormatter.toBanner(
-                            DetectResult(
-                                id = info?.name ?: targetName,
-                                name = info?.name ?: targetName,
-                                price = info?.price,
-                                promo = info?.event,
-                                hasAllergy = info?.allergy == true,
-                                allergyNote = if (info?.allergy == true) "알레르기 주의" else null,
-                                confidence = 0.95f
-                            )
+                        val det = DetectResult(
+                            id = info?.name ?: targetName,
+                            name = info?.name ?: targetName,
+                            price = info?.price,
+                            promo = info?.event,
+                            hasAllergy = info?.allergy == true,
+                            allergyNote = if (info?.allergy == true) "알레르기 주의" else null,
+                            confidence = 0.95f
                         )
+                        val banner = ResultFormatter.toBanner(det)
                         _ui.update { it.copy(banner = banner, guiding = false, guideDirection = null) }
-                        cart?.remove(info?.name ?: targetName)
+                        cart?.remove(det.name)
                         proceedToNextCartTarget()
-                        speak(ResultFormatter.toVoice(
-                            DetectResult(
-                                id = info?.name ?: targetName,
-                                name = info?.name ?: targetName,
-                                price = info?.price,
-                                promo = info?.event,
-                                hasAllergy = info?.allergy == true,
-                                allergyNote = if (info?.allergy == true) "알레르기 주의" else null,
-                                confidence = 0.95f
-                            )
-                        ).text)
+                        speak(ResultFormatter.toVoice(det).text)
                         return@launch
                     }
-                    else -> delay(600)
+                    else -> {
+                        // 서버에서 아직 못 찾음 → 잠시 후 재시도
+                        delay(600)
+                    }
                 }
             }
             _ui.update { it.copy(guiding = false, guideDirection = null) }
         }
-
-}
+    }
 
     /** (프레임 공급자 없을 때) 스텁 1회 */
     private fun start006StubOnce(targetName: String) {
@@ -241,9 +301,9 @@ class ScanViewModel(
             delay(500)
             val info = DetectResult(
                 id = targetName, name = targetName,
-                price = listOf(1500,1700,2000,2200,2500).random(),
+                price = listOf(1500, 1700, 2000, 2200, 2500).random(),
                 promo = listOf("1+1", "2+1", null).random(),
-                hasAllergy = listOf(true,false).random(),
+                hasAllergy = listOf(true, false).random(),
                 allergyNote = "유당 포함", confidence = 0.95f
             )
             _ui.update { it.copy(banner = ResultFormatter.toBanner(info), guiding = false, guideDirection = null) }
@@ -270,13 +330,11 @@ class ScanViewModel(
         }
     }
 
-    /** 임시 캡처(placeholder) */
-    private fun captureFrame(index: Int) {
+    /** 임시 캡처(placeholder) — 필요 시 테스트용으로 사용 */
+    private fun captureFrame(@Suppress("UNUSED_PARAMETER") index: Int) {
         val placeholder = Bitmap.createBitmap(800, 600, Bitmap.Config.ARGB_8888)
         _ui.update { it.copy(capturedFrames = it.capturedFrames + placeholder) }
     }
-
-
 
     fun clearCapturedFrames() { _ui.update { it.copy(capturedFrames = emptyList()) } }
 

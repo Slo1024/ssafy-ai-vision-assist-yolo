@@ -4,8 +4,7 @@ package com.example.lookey.data.network
 import com.example.lookey.data.model.ApiResponse
 import com.example.lookey.data.model.LoginResponse
 import com.example.lookey.data.model.RefreshRequest
-import com.example.lookey.data.remote.dto.*
-import com.example.lookey.data.remote.dto.navigation.NavResult
+import com.example.lookey.data.remote.dto.navigation.VisionAnalyzeResponse
 import com.example.lookey.data.remote.dto.product.LocationSearchResult
 import com.example.lookey.data.remote.dto.product.ShelfSearchResult
 import okhttp3.MultipartBody
@@ -39,13 +38,11 @@ interface ApiService {
         @Part("product_name") productName: RequestBody
     ): Response<ApiResponse<LocationSearchResult>>
 
-    // NAV-001: 길 안내
     @Multipart
     @POST("api/v1/vision/ai/analyze")
     suspend fun navGuide(
         @Part image: MultipartBody.Part
-    ): Response<ApiResponse<NavResult>>
-
+    ): Response<VisionAnalyzeResponse>
 
 
 
