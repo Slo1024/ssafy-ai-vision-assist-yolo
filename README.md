@@ -1,11 +1,7 @@
-# Jenkins Build Speed Test
+# MR Build Test
 
-**🚀 빌드 속도 측정 테스트**
-- 테스트 시간: 2025-09-20 06:50
-- 목적: Docker 캐시 활용한 빌드 시간 측정
-- 예상: AI 컨테이너 빌드 시간 확인
-
-**⚡ Docker 캐시 최적화 후 테스트**
-- 테스트 시간: 2025-09-20 07:00
-- 변경사항: --no-cache → --parallel 적용
-- 예상: AI 빌드 시간 대폭 단축
+**🔀 Merge Request 빌드 트리거 테스트**
+- 테스트 브랜치: feature/PJT/mr-build-test
+- 목적: MR 생성 시 빌드 횟수 확인
+- 예상: 1회 빌드 (Push event만)
+- 검증: GitLab Webhook Push events 설정 확인
