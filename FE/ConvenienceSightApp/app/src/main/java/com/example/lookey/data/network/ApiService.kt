@@ -23,29 +23,31 @@ interface ApiService {
     @POST("api/auth/refresh")
     fun refreshToken(@Body request: RefreshRequest): Response<LoginResponse>
 
-    // PRODUCT-005
     @Multipart
-    @POST("api/product/search")
+    @POST("api/v1/product/search")
     suspend fun searchShelf(
         @Part shelfImage: MultipartBody.Part
     ): Response<ApiResponse<ShelfSearchResult>>
 
-    // PRODUCT-006
+    // 스웨거 기준: product_name = query
+    // 백엔드가 멀티파트 file + query 조합을 받도록 구현돼 있다면 이 형태로 맞음.
     @Multipart
-    @POST("api/product/search/location")
+    @POST("api/v1/product/search/location")
     suspend fun searchProductLocation(
         @Part currentFrame: MultipartBody.Part,
-        @Part("product_name") productName: RequestBody
+        @Query("product_name") productName: String
     ): Response<ApiResponse<LocationSearchResult>>
 
+    // AI-001: 우선 멀티파트 버전 유지
     @Multipart
     @POST("api/v1/vision/ai/analyze")
     suspend fun navGuide(
         @Part image: MultipartBody.Part
     ): Response<VisionAnalyzeResponse>
 
-
-
-
-
+    // (선택) 스웨거가 JSON만 표기돼 있고 실제도 JSON이라면 이걸로 호출 테스트
+    @POST("api/v1/vision/ai/analyze")
+    suspend fun navGuideJson(
+        @Body body: Map<String, String> // body["file"] 에 base64
+    ): Response<VisionAnalyzeResponse>
 }
