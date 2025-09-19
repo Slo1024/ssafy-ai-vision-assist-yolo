@@ -8,7 +8,6 @@ import com.example.lookey.data.model.CartRemoveRequest
 import com.example.lookey.data.model.LoginResponse
 import com.example.lookey.data.model.ProductSearchResponse
 import com.example.lookey.data.model.RefreshRequest
-<<<<<<< FE/ConvenienceSightApp/app/src/main/java/com/example/lookey/data/network/ApiService.kt
 import com.example.lookey.data.remote.dto.navigation.VisionAnalyzeResponse
 import com.example.lookey.data.remote.dto.product.LocationSearchResult
 import com.example.lookey.data.remote.dto.product.ShelfSearchResult
@@ -17,8 +16,6 @@ import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.*
 import com.example.lookey.data.model.allergy.*
-import retrofit2.Response
-import retrofit2.http.*
 
 
 interface ApiService {

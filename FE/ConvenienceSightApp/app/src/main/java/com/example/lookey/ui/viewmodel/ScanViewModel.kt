@@ -277,7 +277,7 @@ class ScanViewModel(
                         )
                         val banner = ResultFormatter.toBanner(det)
                         _ui.update { it.copy(banner = banner, guiding = false, guideDirection = null) }
-                        cart?.remove(det.name)
+                        cart?.remove(CartLine(name = det.name))   // CartLine 생성자 필드명은 프로젝트 정의에 맞춰 주세요
                         proceedToNextCartTarget()
                         speak(ResultFormatter.toVoice(det).text)
                         return@launch
@@ -307,7 +307,7 @@ class ScanViewModel(
                 allergyNote = "유당 포함", confidence = 0.95f
             )
             _ui.update { it.copy(banner = ResultFormatter.toBanner(info), guiding = false, guideDirection = null) }
-            cart?.remove(info.id)
+            cart?.remove(CartLine(name = info.name))
             proceedToNextCartTarget()
             speak(ResultFormatter.toVoice(info).text)
         }
