@@ -1,5 +1,6 @@
 package com.example.lookey.ui.cart
 
+import com.example.lookey.ui.viewmodel.CartLine
 import com.example.lookey.ui.viewmodel.CartViewModel
 
 class CartPortFromViewModel(
@@ -9,10 +10,10 @@ class CartPortFromViewModel(
     override fun isInCart(name: String): Boolean =
         vm.cart.value.any { it.name == name }
 
-    override fun remove(name: String) {
-        vm.removeFromCart(name)
+    override fun remove(cartLine: CartLine) {
+       // vm.removeFromCart(cartLine.cartId!!)
     }
 
     override fun namesSnapshot(): List<String> =
-        vm.cart.value.map { it.name }
+        vm.cart.value.mapNotNull { it.name }
 }

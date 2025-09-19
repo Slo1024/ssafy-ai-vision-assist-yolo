@@ -10,6 +10,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -53,7 +56,7 @@ public class CartController {
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "status", 201,
                 "message", "장바구니에 상품을 담았습니다.",
-                "result", null
+                "result", Collections.emptyMap()
         ));
     }
 
@@ -63,10 +66,12 @@ public class CartController {
             @Valid @RequestBody CartRemoveRequest request
     ) {
         cartService.removeItem(userId, request);
-        return ResponseEntity.ok(Map.of(
-                "status", 200,
-                "message", "장바구니에서 삭제하였습니다.",
-                "result", null
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", 200);
+        response.put("message", "장바구니에서 삭제하였습니다.");
+        response.put("result", null); // null도 넣을 수 있음
+
+        return ResponseEntity.ok(response);
+
     }
 }

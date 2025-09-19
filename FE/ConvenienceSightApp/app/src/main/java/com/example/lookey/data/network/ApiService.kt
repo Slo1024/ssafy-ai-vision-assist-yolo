@@ -1,7 +1,11 @@
 package com.example.lookey.data.network
 
-
+import com.example.lookey.data.model.ApiResponse
+import com.example.lookey.data.model.CartAddRequest
+import com.example.lookey.data.model.CartListResponse
+import com.example.lookey.data.model.CartRemoveRequest
 import com.example.lookey.data.model.LoginResponse
+import com.example.lookey.data.model.ProductSearchResponse
 import com.example.lookey.data.model.RefreshRequest
 import com.example.lookey.data.model.allergy.*
 import retrofit2.Response
@@ -40,4 +44,16 @@ interface ApiService {
     suspend fun deleteAllergy(
         @Body body: AllergyDeleteRequest
     ): Response<AllergyDeleteResponse>
+
+    @GET("api/v1/carts")
+    suspend fun getCartList(): Response<CartListResponse>
+
+    @GET("api/v1/carts/search/{searchword}")
+    suspend fun searchProducts(@Path("searchword") keyword: String): Response<ProductSearchResponse>
+
+    @POST("api/v1/carts")
+    suspend fun addToCart(@Body request: CartAddRequest): Response<Void>
+
+    @HTTP(method = "DELETE", path = "api/v1/carts", hasBody = true)
+    suspend fun removeFromCart(@Body request: CartRemoveRequest): Response<Void>
 }

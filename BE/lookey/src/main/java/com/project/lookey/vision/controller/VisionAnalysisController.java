@@ -20,7 +20,7 @@ import java.util.Map;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/vision")
+@RequestMapping("/api/v1/vision/ai")
 @RequiredArgsConstructor
 @Tag(name = "Vision Analysis API", description = "Google Cloud Vision API를 이용한 이미지 분석")
 public class VisionAnalysisController {
@@ -72,16 +72,7 @@ public class VisionAnalysisController {
         .onErrorResume(this::createErrorResponse);
     }
 
-    @GetMapping("/health")
-    @Operation(summary = "Health Check", description = "Vision API 서비스 상태 확인")
-    @ApiResponse(responseCode = "200", description = "서비스 정상")
-    public ResponseEntity<Map<String, String>> healthCheck() {
-        Map<String, String> response = new HashMap<>();
-        response.put("status", "UP");
-        response.put("service", "Vision API");
-        response.put("timestamp", String.valueOf(System.currentTimeMillis()));
-        return ResponseEntity.ok(response);
-    }
+    
 
     private ResponseEntity<Map<String, Object>> createSuccessResponse(Map<String, Object> analysisResult) {
         Map<String, Object> response = new HashMap<>();

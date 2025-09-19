@@ -172,7 +172,7 @@ class ScanViewModel(
             }
 
             // 장바구니에서 제거
-            cart?.remove(info.id)
+            //cart?.remove(info.id)
 
             // 다음 타겟으로 진행
             proceedToNextCartTarget()
