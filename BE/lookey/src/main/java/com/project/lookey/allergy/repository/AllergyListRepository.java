@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface AllergyListRepository extends JpaRepository<AllergyList, Long> {
@@ -21,4 +22,6 @@ public interface AllergyListRepository extends JpaRepository<AllergyList, Long> 
         ORDER BY al.name
     """)
     List<com.project.lookey.allergy.dto.AllergySearchResponse.Item> findNamesByKeyword(@Param("keyword") String keyword);
+
+    Optional<AllergyList> findByName(String name);
 }
