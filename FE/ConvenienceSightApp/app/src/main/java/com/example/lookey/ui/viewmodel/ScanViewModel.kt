@@ -278,9 +278,6 @@ class ScanViewModel(
 
 
 
-
-
-
     fun clearCapturedFrames() { _ui.update { it.copy(capturedFrames = emptyList()) } }
 
     fun onDetected(result: DetectResult) {

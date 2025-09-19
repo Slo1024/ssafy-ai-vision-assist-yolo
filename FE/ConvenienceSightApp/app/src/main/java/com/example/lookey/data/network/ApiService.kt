@@ -41,7 +41,7 @@ interface ApiService {
 
     // NAV-001: 길 안내
     @Multipart
-    @POST("api/v1/vision/ai")
+    @POST("api/v1/vision/ai/analyze")
     suspend fun navGuide(
         @Part image: MultipartBody.Part
     ): Response<ApiResponse<NavResult>>
