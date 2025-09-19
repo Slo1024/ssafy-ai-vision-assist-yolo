@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Collections;
 import java.util.Map;
 
 @RestController
@@ -55,7 +57,7 @@ public class AllergyController {
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "status", 201,
                 "message", "알레르기를 등록했습니다.",
-                "result", null
+                "result", Collections.emptyMap()
         ));
     }
 
@@ -68,7 +70,7 @@ public class AllergyController {
         return ResponseEntity.ok(Map.of(
                 "status", 200,
                 "message", "알레르기를 삭제했습니다.",
-                "result", null
+                "result", Collections.emptyMap()
         ));
     }
 }
