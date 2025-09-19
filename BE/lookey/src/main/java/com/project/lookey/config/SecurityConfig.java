@@ -32,7 +32,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll() // 로그인/인증 관련
                         .requestMatchers("/api/test/**").permitAll() // 테스트 API
                         .requestMatchers("/api/v1/allergy/search/**").permitAll() // 알레르기 검색
-                        .requestMatchers("/api/v1/vision/**").permitAll() // Vision API
                         .requestMatchers("/api/product/seven/drinks").permitAll() // product db API
                         .requestMatchers("/actuator/**").permitAll() // Actuator endpoints
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll() // Swagger
@@ -41,6 +40,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/allergy").authenticated() // 내 알레르기 목록, 추가, 삭제
                         .requestMatchers("/api/v1/carts/**").authenticated() // 장바구니 관련
                         .requestMatchers("/api/v1/product/**").authenticated() // 상품 관련 (검색 제외)
+                        .requestMatchers("/api/v1/vision/**").authenticated() // Vision API - 인증 필요
 
                         // 나머지는 인증 필요
                         .anyRequest().authenticated()
