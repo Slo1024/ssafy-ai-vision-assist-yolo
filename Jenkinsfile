@@ -174,26 +174,33 @@ pipeline {
                     echo "Checking backend application health..."
                     sh """
                         # Try multiple health check endpoints
-                        if curl -f http://localhost:${API_PORT}/actuator/health; then
+                        curl -f http://localhost:${API_PORT}/actuator/health >/dev/null 2>&1
+                        if [ \$? -eq 0 ]; then
                             echo "Backend health check successful!"
-                        elif curl -f http://localhost:${API_PORT}/api/test/health; then
-                            echo "Backend custom health check successful!"
                         else
-                            echo "Backend health check failed - checking logs..."
-                            docker logs --tail 20 springapp-${DEPLOY_ENV}
-                            echo "Backend health check failed but deployment may still be starting"
+                            curl -f http://localhost:${API_PORT}/api/test/health >/dev/null 2>&1
+                            if [ \$? -eq 0 ]; then
+                                echo "Backend custom health check successful!"
+                            else
+                                echo "Backend health check failed - checking logs..."
+                                docker logs --tail 20 springapp-${DEPLOY_ENV}
+                                echo "Backend health check failed but deployment may still be starting"
+                                exit 1
+                            fi
                         fi
                     """
 
                     // AI service health check
                     echo "Checking AI service health..."
                     sh """
-                        if curl -f http://localhost:8083/health; then
+                        curl -f http://localhost:8083/health >/dev/null 2>&1
+                        if [ \$? -eq 0 ]; then
                             echo "AI service health check successful!"
                         else
                             echo "AI service health check failed - checking logs..."
                             docker logs --tail 20 lookey-ai-service
                             echo "AI service health check failed but deployment may still be starting"
+                            exit 1
                         fi
                     """
                 }
