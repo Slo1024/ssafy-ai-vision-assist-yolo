@@ -33,7 +33,7 @@ public class AiSearchService {
     private final ObjectMapper objectMapper;
     private final ProductRepository productRepository;
 
-    @Value("${ai.search.url:http://localhost:9000}")
+    @Value("${ai.search.url}")
     private String aiServerUrl;
 
     public List<String> findMatchedProducts(MultipartFile[] images, List<String> cartProductNames) {
