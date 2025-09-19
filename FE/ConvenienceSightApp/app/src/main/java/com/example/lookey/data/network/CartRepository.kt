@@ -43,8 +43,8 @@ class CartRepository(private val apiService: ApiService) {
         return response.isSuccessful
     }
 
-//    suspend fun removeCartItem(cartId: Int): Boolean {
-//        val response = apiService.removeFromCart(cartId)
-//        return response.isSuccessful
-//    }
+    suspend fun removeCartItem(cartId: Int): Boolean {
+        val response = apiService.removeFromCart(CartRemoveRequest(cartId))
+        return response.isSuccessful
+    }
 }
