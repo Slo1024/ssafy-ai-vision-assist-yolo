@@ -12,16 +12,7 @@ import java.util.Optional;
 @Repository
 public interface AllergyListRepository extends JpaRepository<AllergyList, Long> {
 
-    @Query("""
-        SELECT new com.project.lookey.allergy.dto.AllergySearchItem(
-            al.id,
-            al.name
-        )
-        FROM AllergyList al
-        WHERE al.name LIKE CONCAT('%', :keyword, '%')
-        ORDER BY al.name
-    """)
-    List<com.project.lookey.allergy.dto.AllergySearchItem> findNamesByKeyword(@Param("keyword") String keyword);
+    List<AllergyList> findByNameContainingOrderByName(String keyword);
 
     Optional<AllergyList> findByName(String name);
 }

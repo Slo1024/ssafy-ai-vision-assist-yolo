@@ -33,7 +33,10 @@ public class AllergyService {
 
     public AllergySearchResponse searchAllergies(String keyword) {
         if (keyword == null || keyword.isBlank()) return new AllergySearchResponse(java.util.List.of());
-        var items = allergyListRepository.findNamesByKeyword(keyword.trim());
+        var allergyLists = allergyListRepository.findByNameContainingOrderByName(keyword.trim());
+        var items = allergyLists.stream()
+                .map(al -> new com.project.lookey.allergy.dto.AllergySearchItem(al.getId(), al.getName()))
+                .collect(java.util.stream.Collectors.toList());
         return new AllergySearchResponse(items);
     }
 
