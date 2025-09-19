@@ -1,4 +1,4 @@
-package com.example.lookey.data.remote.dto
+package com.example.lookey.data.remote.dto.navigation
 
 import com.google.gson.annotations.SerializedName
 

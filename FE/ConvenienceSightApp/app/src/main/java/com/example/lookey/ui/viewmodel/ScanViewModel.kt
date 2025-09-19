@@ -54,10 +54,6 @@ class ScanViewModel(
         val guiding: Boolean = false,
         val guideDirection: DirectionBucket? = null,
 
-        // (옵션) 텍스트 안내 루프
-        val guideMsg: String? = null,
-        val guideTicking: Boolean = false,
-
         // 길 안내 표시용
         val navSummary: String? = null,
         val navActions: List<String> = emptyList()
@@ -119,12 +115,11 @@ class ScanViewModel(
     }
 
 
-    /** 005: 4장 캡처 → 서버 호출 → 큐/모달 세팅 */
+    // 005: 1장 캡처 → 서버 호출 → 결과 반영
     fun startPanorama() {
         if (_ui.value.mode != Mode.SCAN) return
 
         viewModelScope.launch {
-            // 초기화
             _ui.update {
                 it.copy(
                     scanning = true,
@@ -137,38 +132,23 @@ class ScanViewModel(
                 )
             }
 
-            // 기본 4회 캡처
-            repeat(4) { idx ->
-                delay(if (idx == 0) 0 else 800)
-                captureFrame(idx)
-            }
-
-            // 부족하면 조용히 보충 캡처
-            var guard = 0
-            while (_ui.value.capturedFrames.size < 4 && guard < 6) {
-                delay(300)
-                captureFrame(_ui.value.capturedFrames.size)
-                guard++
-            }
-
-            // UI 종료
-            _ui.update { it.copy(capturing = false, scanning = false) }
-
-            val framesToSend = _ui.value.capturedFrames.take(4)
-            if (framesToSend.size < 4) {
-                // 사용자 알림 없이 중단
+            val frame = frameProvider?.invoke()
+            if (frame == null) {
+                _ui.update { it.copy(capturing = false, scanning = false) }
                 return@launch
             }
 
-            // 서버 호출
-            runCatching {
-                repoNet.productShelfSearch(cacheDir, framesToSend)
-            }.onSuccess { res ->
-                val matched = res.result.matchedNames.orEmpty()
-                val next = matched.firstOrNull()
+            val res = runCatching { repoNet.productShelfSearch(cacheDir, frame) }.getOrNull()
 
-                _ui.update {
-                    it.copy(
+            // 3초 뒤 일반 모드로 복귀 (UI 연출)
+            kotlinx.coroutines.delay(3000)
+            _ui.update { it.copy(capturing = false, scanning = false) }
+
+            res?.let {
+                val matched = it.result.matchedNames.orEmpty()
+                val next = matched.firstOrNull()
+                _ui.update { s ->
+                    s.copy(
                         banner = ResultFormatter.Banner(
                             type = ResultFormatter.Banner.Type.SUCCESS,
                             text = "상품 인식이 종료되었습니다."
@@ -178,12 +158,12 @@ class ScanViewModel(
                         showCartGuideModal = (next != null)
                     )
                 }
-            }.onFailure { e ->
-                // 조용히 로그만
-                println("PRODUCT-005 failed: ${e.message}")
+            } ?: kotlin.run {
+                println("PRODUCT-005 failed or null response")
             }
         }
     }
+
 
     /** 모달: “예” → 006 시작 */
     fun onCartGuideConfirm() {
@@ -298,36 +278,7 @@ class ScanViewModel(
 
 
 
-    fun guideAnalyzeOnce() {
-        // frameProvider/cachedDir는 기존에 주입되어 있다고 가정
-        if (frameProvider == null) return
-        viewModelScope.launch {
-            val bmp = frameProvider.invoke() ?: return@launch
-            runCatching {
-                repoNet.analyzeVisionAi(cacheDir, bmp)
-            }.onSuccess { res ->
-                // 간단 TTS 생성
-                val dir = res.data.directions
-                val obs = res.data.obstacles
-                val pieces = mutableListOf<String>()
-                if (dir.front) pieces += "앞으로 이동 가능"
-                if (dir.left)  pieces += "좌측 이동 가능"
-                if (dir.right) pieces += "우측 이동 가능"
-                if (obs.front) pieces += "정면에 장애물"
-                if (obs.left)  pieces += "좌측 장애물"
-                if (obs.right) pieces += "우측 장애물"
-                if (res.data.counter) pieces += "계산대가 보입니다"
-                if (res.data.people.front || res.data.people.left || res.data.people.right)
-                    pieces += "주변에 사람이 있습니다"
 
-                val msg = if (pieces.isEmpty()) "이동 정보를 파악하지 못했습니다." else pieces.joinToString(". ") + "."
-                speak(msg)
-
-                // 필요하면 UI 상태에도 반영
-                _ui.update { it.copy(guideMsg = msg, guideTicking = false) }
-            }
-        }
-    }
 
 
     fun clearCapturedFrames() { _ui.update { it.copy(capturedFrames = emptyList()) } }
