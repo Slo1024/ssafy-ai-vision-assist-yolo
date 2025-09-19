@@ -11,6 +11,7 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.HTTP
 import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Path
@@ -36,8 +37,6 @@ interface ApiService {
     @POST("api/v1/carts")
     suspend fun addToCart(@Body request: CartAddRequest): Response<Void>
 
-    @DELETE("api/v1/carts")
-    suspend fun removeFromCart(@Query("cart_id") cartId: Int): Response<Void>
-
-
+    @HTTP(method = "DELETE", path = "api/v1/carts", hasBody = true)
+    suspend fun removeFromCart(@Body request: CartRemoveRequest): Response<Void>
 }

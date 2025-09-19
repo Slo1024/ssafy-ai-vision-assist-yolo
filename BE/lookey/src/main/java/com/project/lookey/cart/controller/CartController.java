@@ -11,6 +11,7 @@ import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -55,7 +56,7 @@ public class CartController {
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "status", 201,
                 "message", "장바구니에 상품을 담았습니다.",
-                "result", null
+                "result", Collections.emptyMap()
         ));
     }
 

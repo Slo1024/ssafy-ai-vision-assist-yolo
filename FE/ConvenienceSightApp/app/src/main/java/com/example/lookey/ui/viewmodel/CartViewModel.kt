@@ -63,11 +63,9 @@ class CartViewModel(private val repository: CartRepository) : ViewModel() {
             try {
                 val success = repository.addCartItem(productId)
                 if (success) {
-                    // 중복 확인 후 UI에 반영
-                    _cart.update { list ->
-                        if (list.any { it.productId == productId }) list
-                        else list + CartLine(productId = productId, name = name)
-                    }
+                    // 서버에서 최신 장바구니 가져오기
+                    val latestCart = repository.getCartList()
+                    _cart.value = latestCart
                 }
             } catch (e: Exception) {
                 Log.e("CartViewModel", "장바구니 추가 실패", e)
@@ -75,20 +73,21 @@ class CartViewModel(private val repository: CartRepository) : ViewModel() {
         }
     }
 
+
+
     /** 삭제: 해당 항목 한 번에 제거 */
-//    fun removeFromCart(cartId: Int) {
-//        viewModelScope.launch {
-//            try {
-//                val success = repository.removeCartItem(cartId)
-//                if (success) {
-//                    _cart.update { list ->
-//                        list.filterNot { it.cartId == cartId }  // cartId가 Int라고 가정
-//                    }
-//
-//                }
-//            } catch (e: Exception) {
-//                Log.e("CartViewModel", "장바구니 삭제 실패", e)
-//            }
-//        }
-//    }
+    fun removeFromCart(cartId: Int) {
+        viewModelScope.launch {
+            try {
+                val success = repository.removeCartItem(cartId)
+                if (success) {
+                    // 화면에서 해당 항목 제거
+                    _cart.update { list -> list.filterNot { it.cartId == cartId } }
+                }
+            } catch (e: Exception) {
+                Log.e("CartViewModel", "장바구니 삭제 실패", e)
+            }
+        }
+    }
+
 }
