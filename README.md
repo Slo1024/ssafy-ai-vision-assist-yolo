@@ -1,28 +1,5 @@
-# Cart API Test
+# Jenkins Webhook Test
 
-**✅ Generic Webhook 복구 성공:**
-- Token Credential 문제 해결 (gitlab-api-token → none)
-- Manual curl 테스트 성공 (빌드 #988 트리거)
-- Optional filter 제거로 모든 webhook 허용
-- 실제 GitLab Push 테스트 진행
-- 시간: 2025-09-20 05:00
-
-**🔀 MR 트리거 테스트:**
-- feature/PJT/webhook-mr-test 브랜치 생성
-- MR 생성 시 자동 빌드 트리거 테스트
-- Jenkins Webhook 설정 완전 검증
-- 시간: 2025-09-20 05:05
-
-**🔧 중복 빌드 문제 해결 테스트:**
-- Silent response 활성화로 중복 webhook 응답 최소화
-- GitLab MR/Push 시 단일 빌드 트리거 확인
-- 시간: 2025-09-20 05:15
-
-
-**📊 Jenkins 로그 분석 결과:**
-- MR 시 중복 빌드 5개 발생 확인 (#504, #509, #510)
-- jenkins-generic-webhook-trigger-plugin_uuid 파라미터 누락 경고 반복
-- GitLab Webhook 이벤트 중복 트리거 문제로 판단
-- 해결: Push events만 유지, 나머지 이벤트 비활성화
-- 테스트 브랜치: feature/PJT/webhook-test
-- 테스트 시간: 2025-09-20 06:20
+**🚀 Direct dev push test - README cleared**
+- 테스트 시간: 2025-09-20 06:30
+- 목적: Jenkins Pipeline SCM 연결 및 중복 빌드 확인
