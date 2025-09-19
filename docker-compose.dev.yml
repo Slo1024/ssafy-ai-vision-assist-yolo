@@ -52,6 +52,10 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - GOOGLE_REDIRECT_URI=http://j13e101.p.ssafy.io:8082/login/oauth2/code/google
       - GOOGLE_CALLBACK_URL=http://j13e101.p.ssafy.io:8082/auth/google/callback
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
+      - GOOGLE_CLOUD_PROJECT_ID=${GOOGLE_CLOUD_PROJECT_ID}
+    volumes:
+      - /opt/project/ssafy-finance-6921c01f57ed.json:/opt/project/ssafy-finance-6921c01f57ed.json:ro
     depends_on:
       - mysql-shared
       - redis-shared
