@@ -11,7 +11,7 @@ services:
     ports:
       - "8083:8083"
     volumes:
-      # Mount the model file from dev directory
+      # Mount the model file from project root
       - "./clip_linear_head.pt:/models/clip_linear_head.pt:ro"
       # Mount logs directory
       - ai-logs:/app/logs
@@ -23,11 +23,11 @@ services:
       - shared-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8083/health', timeout=10)"]
+      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
+      start_period: 120s  # AI model loading takes time
     deploy:
       resources:
         limits:
