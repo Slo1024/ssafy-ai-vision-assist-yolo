@@ -37,7 +37,6 @@ public class AllergyController {
 
     @GetMapping("/search/{searchword}")
     public ResponseEntity<?> search(
-            @AuthenticationPrincipal(expression = "userId") Integer userId,
             @PathVariable("searchword") String searchword
     ) {
         AllergySearchResponse data = allergyService.searchAllergies(searchword);
