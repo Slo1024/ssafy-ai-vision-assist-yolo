@@ -13,12 +13,13 @@ import androidx.compose.ui.graphics.Shape
 import com.example.lookey.R
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardCapitalization
 
 @Composable
 fun SearchInput(
     query: String,
     onQueryChange: (String) -> Unit,
-    onSearch: () -> Unit,
+    onSearch: (String) -> Unit,
     placeholder: String,
     modifier: Modifier = Modifier,
     shape: Shape = MaterialTheme.shapes.extraLarge
@@ -26,17 +27,20 @@ fun SearchInput(
     val focus = LocalFocusManager.current
     OutlinedTextField(
         value = query,
-        onValueChange = onQueryChange,
+        onValueChange = { text ->
+            // ❗여기서는 검색 호출하지 말기
+            onQueryChange(text)
+        },
         placeholder = { Text(placeholder, style = MaterialTheme.typography.titleLarge) },
         textStyle = MaterialTheme.typography.titleLarge,
         singleLine = true,
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None,imeAction = ImeAction.Search),
         keyboardActions = KeyboardActions(
-            onSearch = { onSearch(); focus.clearFocus() },
-            onDone   = { onSearch(); focus.clearFocus() }
+            onSearch = {  onSearch(query.trim()); focus.clearFocus() },
+//            onDone   = { onSearch(query); focus.clearFocus() }
         ),
         trailingIcon = {
-            IconButton(onClick = { onSearch(); focus.clearFocus() }) {
+            IconButton(onClick = { onSearch(query.trim()); focus.clearFocus() }) {
                 Icon(painter = painterResource(R.drawable.ic_search), contentDescription = "검색")
             }
         },
