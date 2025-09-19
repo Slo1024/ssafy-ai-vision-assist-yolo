@@ -14,6 +14,7 @@ import com.example.lookey.util.AuthListener
 import com.example.lookey.util.PrefUtil
 import kotlinx.coroutines.runBlocking
 
+
 object RetrofitClient {
     private const val BASE_URL = "https://j13e101.p.ssafy.io/dev/" // 실제 API 주소로 교체
     //private const val BASE_URL = "http://10.0.2.2:8082/" // 실제 API 주소로 교체
@@ -97,5 +98,13 @@ object RetrofitClient {
         } catch (e: Exception) {
             null
         }
+    }
+
+    val api: ApiService by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(ApiService::class.java)
     }
 }

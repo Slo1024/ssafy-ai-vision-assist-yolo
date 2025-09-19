@@ -10,6 +10,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -21,7 +24,6 @@ public class CartController {
 
     @GetMapping
     public ResponseEntity<?> list(
-            @RequestHeader(value = "Authorization", required = true) String authorization,
             @AuthenticationPrincipal(expression = "userId") Integer userId
     ) {
         CartListResponse data = cartService.getMyCart(userId);
@@ -34,7 +36,6 @@ public class CartController {
 
     @GetMapping("/search/{searchword}")
     public ResponseEntity<?> search(
-            @RequestHeader(value = "Authorization", required = true) String authorization,
             @AuthenticationPrincipal(expression = "userId") Integer userId,
             @PathVariable("searchword") String searchword
     ) {
@@ -48,7 +49,6 @@ public class CartController {
 
     @PostMapping
     public ResponseEntity<?> add(
-            @RequestHeader(value = "Authorization", required = true) String authorization,
             @AuthenticationPrincipal(expression = "userId") Integer userId,
             @Valid @RequestBody CartAddRequest request
     ) {
@@ -56,21 +56,22 @@ public class CartController {
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "status", 201,
                 "message", "장바구니에 상품을 담았습니다.",
-                "result", null
+                "result", Collections.emptyMap()
         ));
     }
 
     @DeleteMapping(consumes = "application/json")
     public ResponseEntity<?> delete(
-            @RequestHeader(value = "Authorization", required = true) String authorization,
             @AuthenticationPrincipal(expression = "userId") Integer userId,
             @Valid @RequestBody CartRemoveRequest request
     ) {
         cartService.removeItem(userId, request);
-        return ResponseEntity.ok(Map.of(
-                "status", 200,
-                "message", "장바구니에서 삭제하였습니다.",
-                "result", null
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", 200);
+        response.put("message", "장바구니에서 삭제하였습니다.");
+        response.put("result", null); // null도 넣을 수 있음
+
+        return ResponseEntity.ok(response);
+
     }
 }

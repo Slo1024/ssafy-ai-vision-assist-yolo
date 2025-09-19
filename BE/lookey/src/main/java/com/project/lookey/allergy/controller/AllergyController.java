@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Collections;
 import java.util.Map;
 
 @RestController
@@ -23,7 +25,6 @@ public class AllergyController {
 
     @GetMapping
     public ResponseEntity<?> list(
-            @RequestHeader(value = "Authorization", required = true) String authorization,
             @AuthenticationPrincipal(expression = "userId") Integer userId
     ) {
         AllergyListResponse data = allergyService.getMyAllergies(userId);
@@ -36,7 +37,6 @@ public class AllergyController {
 
     @GetMapping("/search/{searchword}")
     public ResponseEntity<?> search(
-            @RequestHeader(value = "Authorization", required = true) String authorization,
             @AuthenticationPrincipal(expression = "userId") Integer userId,
             @PathVariable("searchword") String searchword
     ) {
@@ -50,7 +50,6 @@ public class AllergyController {
 
     @PostMapping
     public ResponseEntity<?> add(
-            @RequestHeader(value = "Authorization", required = true) String authorization,
             @AuthenticationPrincipal(expression = "userId") Integer userId,
             @Valid @RequestBody AllergyAddRequest request
     ) {
@@ -58,13 +57,12 @@ public class AllergyController {
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "status", 201,
                 "message", "알레르기를 등록했습니다.",
-                "result", null
+                "result", Collections.emptyMap()
         ));
     }
 
     @DeleteMapping(consumes = "application/json")
     public ResponseEntity<?> delete(
-            @RequestHeader(value = "Authorization", required = true) String authorization,
             @AuthenticationPrincipal(expression = "userId") Integer userId,
             @Valid @RequestBody AllergyRemoveRequest request
     ) {
@@ -72,7 +70,7 @@ public class AllergyController {
         return ResponseEntity.ok(Map.of(
                 "status", 200,
                 "message", "알레르기를 삭제했습니다.",
-                "result", null
+                "result", Collections.emptyMap()
         ));
     }
 }
