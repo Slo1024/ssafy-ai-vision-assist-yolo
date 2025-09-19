@@ -45,7 +45,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/allergy").authenticated() // 내 알레르기 목록, 추가, 삭제
                         .requestMatchers("/api/v1/carts/**").authenticated() // 장바구니 관련
                         .requestMatchers("/api/v1/product/**").authenticated() // 상품 관련 (검색 제외)
-                        .requestMatchers("/api/v1/vision/**").authenticated() // Vision API - 인증 필요
+                        .requestMatchers("/api/v1/vision/**").permitAll() // Vision API - 임시 permit
 
                         // 나머지는 인증 필요
                         .anyRequest().authenticated()
