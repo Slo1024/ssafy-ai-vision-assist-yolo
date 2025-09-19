@@ -63,8 +63,44 @@ fun Bitmap.toJpegUnderSize(
 // --------- NAV-001 ---------
 // part name = "image"
 fun buildNavImagePart(cacheDir: File, bmp: Bitmap): MultipartBody.Part {
-    val f = bmp.toJpegExact(cacheDir, "nav_image", 800, 600, 80)
+    // 권장: 최대 1280x960까지 축소, 4MB 이하가 되도록 품질 하향
+    val f = bmp.toJpegMaxUnderSize(
+        tmpDir = cacheDir,
+        name = "nav_image",
+        maxW = 1280, maxH = 960,
+        startQuality = 85, minQuality = 60,
+        maxBytes = 4_000_000
+    )
     return MultipartBody.Part.createFormData("image", f.name, f.asRequestBody(JPEG))
+}
+
+fun Bitmap.toJpegMaxUnderSize(
+    tmpDir: File,
+    name: String,
+    maxW: Int,
+    maxH: Int,
+    startQuality: Int,
+    minQuality: Int,
+    maxBytes: Int
+): File {
+    val scale = minOf(maxW.toFloat() / width, maxH.toFloat() / height, 1f)
+    val scaled = if (scale < 1f)
+        Bitmap.createScaledBitmap(this, (width * scale).toInt(), (height * scale).toInt(), true)
+    else this
+
+    var q = startQuality.coerceIn(1, 100)
+    var bytes: ByteArray
+    do {
+        val bos = ByteArrayOutputStream()
+        scaled.compress(Bitmap.CompressFormat.JPEG, q, bos)
+        bytes = bos.toByteArray()
+        if (bytes.size <= maxBytes || q <= minQuality) break
+        q -= 5
+    } while (true)
+
+    return File.createTempFile(name, ".jpg", tmpDir).apply {
+        outputStream().use { it.write(bytes) }
+    }
 }
 
 // --------- PRODUCT-005 ---------

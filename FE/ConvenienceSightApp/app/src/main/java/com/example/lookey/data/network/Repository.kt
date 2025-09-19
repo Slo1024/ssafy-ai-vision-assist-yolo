@@ -37,24 +37,27 @@ class Repository {
         frame: Bitmap,
         productName: String
     ): ApiResponse<LocationSearchResult> {
-        val img  = buildCurrentFramePart(cacheDir, frame) // JPEG 800x600, 품질 80
+        val img = buildCurrentFramePart(cacheDir, frame) // JPEG 800x600, 품질 80
         val name = buildTextPart(productName)
         return api.searchProductLocation(img, name).bodyOrThrow()
     }
 
     // ============= NAV-001 =============
     /** NAV-001: 현재 위치 이미지 1장 분석 (/api/v1/vision/ai/analyze) */
-    suspend fun navGuide(
-        cacheDir: File,
-        frame: Bitmap
-    ): VisionAnalyzeResponse {
-        // 권장 1280x960, 품질 80 (4MB 이하로 업로드)
-        val part: MultipartBody.Part = buildNavImagePart(cacheDir, frame)
-        return api.navGuide(part).bodyOrThrow()
+    suspend fun navGuide(cacheDir: File, frame: Bitmap): VisionAnalyzeResponse {
+        val part = buildNavImagePart(cacheDir, frame)
+        val resp = api.navGuide(part)
+        if (resp.isSuccessful) {
+            return resp.body() ?: error("Empty body")
+        } else {
+            // 400 디버깅용: 서버에서 주는 실패 원인을 로그로 남겨 원인 파악을 빠르게
+            android.util.Log.d("NAV-001", "code=${resp.code()} err=${resp.errorBody()?.string()}")
+            throw retrofit2.HttpException(resp)
+        }
     }
 }
 
-/* ---------------- 공통 ---------------- */
+    /* ---------------- 공통 ---------------- */
 private fun <T> Response<T>.bodyOrThrow(): T {
     if (isSuccessful) return body() ?: error("Empty body")
     error("HTTP ${code()} ${message()}")
