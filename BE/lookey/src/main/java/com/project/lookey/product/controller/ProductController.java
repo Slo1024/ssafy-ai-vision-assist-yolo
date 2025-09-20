@@ -8,6 +8,7 @@ import com.project.lookey.product.service.AiSearchService;
 import com.project.lookey.product.service.PyonyCrawler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -32,10 +33,10 @@ public class ProductController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping(value = "/search", consumes = "multipart/form-data")
+    @PostMapping(value = "/search", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> searchShelf(
             @AuthenticationPrincipal(expression = "userId") Integer userId,
-            @RequestParam("shelf_images") MultipartFile shelfImage
+            @RequestPart("shelf_images") MultipartFile shelfImage
     ) {
         try {
             // 이미지 검증
@@ -77,11 +78,11 @@ public class ProductController {
         }
     }
 
-    @PostMapping(value = "/search/location", consumes = "multipart/form-data")
+    @PostMapping(value = "/search/location", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ProductDirectionResponse.Result>> findProductDirection(
             @AuthenticationPrincipal(expression = "userId") Integer userId,
-            @RequestParam("current_frame") MultipartFile currentFrame,
-            @RequestParam("product_name") String productName
+            @RequestPart("current_frame") MultipartFile currentFrame,
+            @RequestPart("product_name") String productName
     ) {
         // 이미지 파일 검증
         if (currentFrame == null || currentFrame.isEmpty()) {
