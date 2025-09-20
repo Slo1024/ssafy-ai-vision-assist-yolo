@@ -32,7 +32,7 @@ public class ProductController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/search")
+    @PostMapping(value = "/search", consumes = "multipart/form-data")
     public ResponseEntity<?> searchShelf(
             @AuthenticationPrincipal(expression = "userId") Integer userId,
             @RequestParam("shelf_images") MultipartFile shelfImage
@@ -77,7 +77,7 @@ public class ProductController {
         }
     }
 
-    @PostMapping("/search/location")
+    @PostMapping(value = "/search/location", consumes = "multipart/form-data")
     public ResponseEntity<ApiResponse<ProductDirectionResponse.Result>> findProductDirection(
             @AuthenticationPrincipal(expression = "userId") Integer userId,
             @RequestParam("current_frame") MultipartFile currentFrame,
