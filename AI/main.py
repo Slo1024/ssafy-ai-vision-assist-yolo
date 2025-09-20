@@ -7,7 +7,6 @@ import sys
 from contextlib import asynccontextmanager
 
 from api.routes import router
-from models.inference import get_inference_engine
 
 # Configure logging
 logging.basicConfig(
@@ -15,7 +14,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler('/app/logs/ai_service.log', mode='a')
     ]
 )
 
@@ -25,23 +23,24 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
     # Startup
-    logger.info("Starting AI Inference Service...")
+    logger.info("Starting Beverage Vision AI Service...")
     try:
-        # Initialize inference engine
-        engine = get_inference_engine()
-        logger.info("Inference engine initialized successfully")
+        # Test import of beverage vision modules
+        from beverage_vision.models.loader import get_models
+        logger.info("Beverage vision models loaded successfully")
         yield
     except Exception as e:
-        logger.error(f"Failed to initialize inference engine: {e}")
-        raise e
+        logger.error(f"Failed to initialize beverage vision: {e}")
+        # Continue anyway for health checks
+        yield
     finally:
         # Cleanup
-        logger.info("Shutting down AI Inference Service...")
+        logger.info("Shutting down Beverage Vision AI Service...")
 
 # Create FastAPI application
 app = FastAPI(
-    title="Lookey AI Inference Service",
-    description="CLIP-based product recognition for Korean convenience store items",
+    title="Lookey Beverage Vision AI Service",
+    description="YOLO + EfficientNet based beverage product recognition",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -64,44 +63,22 @@ app.add_middleware(
 )
 
 # Include API routes
-app.include_router(router, prefix="/api/v1")
+app.include_router(router)
 
 @app.get("/")
 async def root():
     """Root endpoint with service info"""
     return JSONResponse(content={
-        "service": "Lookey AI Inference Service",
+        "service": "Lookey Beverage Vision AI Service",
         "version": "1.0.0",
         "status": "running",
         "endpoints": {
-            "predict": "/api/v1/predict",
-            "health": "/api/v1/health",
-            "model_info": "/api/v1/model/info",
+            "health": "/health",
+            "shelf_search": "/api/v1/product/search/ai",
+            "location_search": "/api/v1/product/search/location/ai",
             "docs": "/docs"
         }
     })
-
-@app.get("/health")
-async def health():
-    """Global health check"""
-    try:
-        engine = get_inference_engine()
-        return JSONResponse(content={
-            "status": "healthy",
-            "service": "ai-inference",
-            "model_loaded": engine.model is not None,
-            "device": str(engine.device)
-        })
-    except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        return JSONResponse(
-            status_code=503,
-            content={
-                "status": "unhealthy",
-                "service": "ai-inference",
-                "error": str(e)
-            }
-        )
 
 # Error handlers
 @app.exception_handler(HTTPException)
@@ -135,8 +112,8 @@ if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8083,
+        port=8000,
         log_level="info",
-        reload=False,  # Set to True for development
+        reload=True,  # Set to True for development
         workers=1  # Single worker for model consistency
     )

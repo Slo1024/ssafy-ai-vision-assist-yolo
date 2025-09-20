@@ -79,7 +79,7 @@ public class AiSearchService {
                 builder.part("shelf_images", resource);
             }
 
-            String requestUrl = aiServerUrl + "/api/product/search/ai";
+            String requestUrl = aiServerUrl + "/api/v1/product/search/ai";
             ShelfDetectionResponse response = webClient
                     .post()
                     .uri(requestUrl)
@@ -207,7 +207,7 @@ public class AiSearchService {
             };
             builder.part("current_frame", resource);
 
-            String requestUrl = aiServerUrl + "/api/product/search/location/ai";
+            String requestUrl = aiServerUrl + "/api/v1/product/search/location/ai";
             CurrentFrameResponse response = webClient
                     .post()
                     .uri(requestUrl)
