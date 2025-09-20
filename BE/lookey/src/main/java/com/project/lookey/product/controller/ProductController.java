@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.project.lookey.OAuth.Service.oauth.CustomOAuth2User;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
@@ -35,9 +36,10 @@ public class ProductController {
 
     @PostMapping(value = "/search", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> searchShelf(
-            @AuthenticationPrincipal(expression = "userId") Integer userId,
+            @AuthenticationPrincipal CustomOAuth2User principal,
             @RequestPart("shelf_images") MultipartFile shelfImage
     ) {
+        Integer userId = principal.getUserId();
         try {
             // 이미지 검증
             if (shelfImage == null || shelfImage.isEmpty()) {
@@ -80,10 +82,11 @@ public class ProductController {
 
     @PostMapping(value = "/search/location", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ProductDirectionResponse.Result>> findProductDirection(
-            @AuthenticationPrincipal(expression = "userId") Integer userId,
+            @AuthenticationPrincipal CustomOAuth2User principal,
             @RequestPart("current_frame") MultipartFile currentFrame,
             @RequestPart("product_name") String productName
     ) {
+        Integer userId = principal.getUserId();
         // 이미지 파일 검증
         if (currentFrame == null || currentFrame.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "현재 화면 이미지가 필요합니다.");
