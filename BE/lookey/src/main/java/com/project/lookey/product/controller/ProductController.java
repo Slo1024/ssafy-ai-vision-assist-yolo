@@ -8,7 +8,6 @@ import com.project.lookey.product.service.AiSearchService;
 import com.project.lookey.product.service.PyonyCrawler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -33,25 +32,20 @@ public class ProductController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping(value = "/search", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping("/search")
     public ResponseEntity<?> searchShelf(
             @AuthenticationPrincipal(expression = "userId") Integer userId,
-            @RequestPart("shelf_images") List<MultipartFile> shelfImages
+            @RequestParam("shelf_images") MultipartFile shelfImage
     ) {
         try {
-            // 이미지 1장 검증
-            if (shelfImages == null || shelfImages.size() != 1) {
+            // 이미지 검증
+            if (shelfImage == null || shelfImage.isEmpty()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "정확히 1장의 이미지가 필요합니다. 현재: " + (shelfImages != null ? shelfImages.size() : "null") + "개");
+                    "이미지 파일이 필요합니다.");
             }
 
             // 이미지 파일 형식 검증
-            MultipartFile image = shelfImages.get(0);
-            if (image.isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "이미지 파일이 비어있습니다.");
-            }
-            String contentType = image.getContentType();
+            String contentType = shelfImage.getContentType();
             if (contentType == null || !contentType.equals("image/jpeg")) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "JPEG 파일만 허용됩니다. 파일형식: " + contentType);
@@ -60,8 +54,8 @@ public class ProductController {
             // 사용자 장바구니 상품명 목록 조회
             List<String> cartProductNames = cartService.getCartProductNames(userId);
 
-            // List를 배열로 변환하여 AI 서비스 호출
-            MultipartFile[] imageArray = shelfImages.toArray(new MultipartFile[0]);
+            // 단일 이미지를 배열로 변환하여 AI 서비스 호출
+            MultipartFile[] imageArray = {shelfImage};
             List<String> matchedNames = aiSearchService.findMatchedProducts(imageArray, cartProductNames, userId);
 
             // 응답 생성
@@ -78,7 +72,7 @@ public class ProductController {
         } catch (Exception e) {
             // 예상치 못한 에러의 경우 상세 정보 포함
             String detailedError = "서버 오류: " + e.getClass().getSimpleName() + " - " + e.getMessage() +
-                                  " (userId: " + userId + ", 이미지: " + (shelfImages != null ? shelfImages.size() : "null") + "장)";
+                                  " (userId: " + userId + ", 이미지: " + (shelfImage != null ? "1" : "null") + "장)";
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, detailedError);
         }
     }
@@ -105,7 +99,7 @@ public class ProductController {
         }
 
         // AI 서비스로 상품 위치 조회
-        ProductDirectionResponse.Result result = aiSearchService.findProductDirection(currentFrame, productName.trim());
+        ProductDirectionResponse.Result result = aiSearchService.findProductDirection(currentFrame, productName.trim(), userId);
 
         // 케이스별 메시지 설정
         String message;
