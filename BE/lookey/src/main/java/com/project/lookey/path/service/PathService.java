@@ -23,6 +23,9 @@ public class PathService {
         int radius = 5000;
         int limit = 3;
 
+        log.info("[PathService] 카카오 API 호출 준비 lat={}, lng={}", lat, lng);
+
+
         try {
             JsonNode json = kakao.searchConvenience(lat, lng, radius);
 
