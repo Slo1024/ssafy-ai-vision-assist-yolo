@@ -9,7 +9,7 @@ import com.example.lookey.ui.viewmodel.AllergyViewModel
 object ServiceLocator {
     fun allergyViewModel(context: Context): AllergyViewModel {
         val api = RetrofitClient.apiService
-        val repo: AllergyRepository = AllergyRepositoryImpl(api)
+        val repo: AllergyRepository = AllergyRepositoryImpl(api, context)
         return AllergyViewModel(repo)
     }
 }

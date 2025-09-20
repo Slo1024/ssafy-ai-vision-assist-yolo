@@ -1,65 +1,107 @@
 package com.example.lookey.data.remote.dto
 
+import android.content.Context
+import android.util.Log
+import com.example.lookey.data.local.TokenProvider
 import com.example.lookey.data.model.allergy.*
 import com.example.lookey.data.network.ApiService
 import com.example.lookey.domain.entity.Allergy
 import com.example.lookey.domain.repo.AllergyRepository
-import retrofit2.Response
+import com.example.lookey.util.PrefUtil
 
 
 class AllergyRepositoryImpl(
-    private val api: ApiService
+    private val api: ApiService,
+    private val context: Context
 ) : AllergyRepository {
 
-    private fun <T> ensureSuccess(res: Response<T>): T {
-        if (!res.isSuccessful) {
-            val errorBody = try {
-                res.errorBody()?.string()
-            } catch (_: Exception) {
-                null
+    private fun ensureToken() {
+        if (TokenProvider.token == null) {
+            val savedToken = PrefUtil.getJwtToken(context)
+            if (!savedToken.isNullOrEmpty()) {
+                TokenProvider.token = savedToken
+                Log.d("AllergyRepo", "Token loaded from preferences: ${savedToken.take(20)}...")
+            } else {
+                Log.e("AllergyRepo", "No token found in preferences!")
             }
-            throw IllegalStateException(
-                "HTTP ${res.code()} ${res.message()} ${errorBody ?: ""}".trim()
-            )
         }
-        return res.body() ?: throw IllegalStateException("Empty body")
     }
 
-
     override suspend fun list(): List<Allergy> {
-        val res = api.getAllergies()
-        val body = ensureSuccess(res)
+        ensureToken()
+        Log.d("AllergyRepo", "Current token: ${TokenProvider.token?.take(20)}...")
+        val response = api.getAllergies()
+        Log.d("AllergyRepo", "List response: $response")
 
-        if (body.status !in 200..299) throw IllegalStateException(body.message)
-        return body.result?.names.orEmpty().map { Allergy(it.allergy_id, it.name) }
+        return if (response.isSuccessful) {
+            val body = response.body()
+            Log.d("AllergyRepo", "List body: $body")
+            body?.result?.items?.map {
+                Allergy(it.allergyId, it.allergyListId, it.allergyName)
+            } ?: emptyList()
+        } else {
+            Log.e("AllergyRepo", "getAllergies failed: ${response.code()}")
+            emptyList()
+        }
     }
 
     override suspend fun search(q: String): List<Allergy> {
-    val keyword = q.trim()
-    if (keyword.isEmpty()) return emptyList() // 빈 문자열이면 요청하지 않음
-    val res = api.searchAllergies(keyword)
-    val body = ensureSuccess(res)
+        val keyword = q.trim()
+        if (keyword.isEmpty()) return emptyList()
 
-    if (body.status !in 200..299) throw IllegalStateException(body.message)
-    return body.result?.items.orEmpty().map { Allergy(it.id, it.name) }
+        ensureToken()
+        val response = api.searchAllergies(keyword)
+        Log.d("AllergyRepo", "Search response: $response")
+
+        return if (response.isSuccessful) {
+            val body = response.body()
+            Log.d("AllergyRepo", "Search body: $body")
+            body?.result?.items?.map {
+                Allergy(it.id, it.id, it.name) // 검색에서는 id가 allergyListId
+            } ?: emptyList()
+        } else {
+            Log.e("AllergyRepo", "searchAllergies failed: ${response.code()}")
+            emptyList()
+        }
     }
 
     override suspend fun add(allergyId: Long) {
-        val res = api.addAllergy(
-            AllergyPostRequest(
-                request = AllergyPostRequest.Request(allergy_id = allergyId)
-            )
-        )
-        val body = ensureSuccess(res)
+        // 파라미터 allergyId는 실제로는 allergyListId여야 함
+        ensureToken()
 
-        if (body.status !in 200..299) throw IllegalStateException(body.message)
-        // result: 항상 null → 처리 없음
+        val request = AllergyPostRequest(allergyId = allergyId)
+        Log.d("AllergyRepo", "Adding allergyListId: $allergyId")
+        Log.d("AllergyRepo", "Request JSON: ${com.google.gson.Gson().toJson(request)}")
+        val response = api.addAllergy(request)
+        Log.d("AllergyRepo", "Add response: ${response.code()} - ${response.message()}")
+        val body = response.body()
+        Log.d("AllergyRepo", "Add body: $body")
+
+        if (!response.isSuccessful) {
+            Log.e("AllergyRepo", "addAllergy failed: ${response.code()}")
+            throw RuntimeException("알러지 추가 실패: ${response.code()}")
+        } else {
+            Log.d("AllergyRepo", "Add successful!")
+        }
     }
 
     override suspend fun delete(allergyId: Long) {
-        val res = api.deleteAllergy(AllergyDeleteRequest(allergyId))
-        val body = ensureSuccess(res)
+        // 파라미터 allergyId는 실제로는 allergyListId여야 함
+        ensureToken()
 
-        if (body.status !in 200..299) throw IllegalStateException(body.message)
+        val request = AllergyDeleteRequest(allergyId)
+        Log.d("AllergyRepo", "Deleting allergyListId: $allergyId")
+        Log.d("AllergyRepo", "Delete JSON: ${com.google.gson.Gson().toJson(request)}")
+        val response = api.deleteAllergy(request)
+        Log.d("AllergyRepo", "Delete response: ${response.code()} - ${response.message()}")
+        val body = response.body()
+        Log.d("AllergyRepo", "Delete body: $body")
+
+        if (!response.isSuccessful) {
+            Log.e("AllergyRepo", "deleteAllergy failed: ${response.code()}")
+            throw RuntimeException("알러지 삭제 실패: ${response.code()}")
+        } else {
+            Log.d("AllergyRepo", "Delete successful!")
+        }
     }
 }

@@ -1,6 +1,7 @@
 package com.example.lookey.data.network
 
 import android.util.Log
+import com.example.lookey.data.local.TokenProvider
 import com.example.lookey.data.model.CartAddRequest
 import com.example.lookey.data.model.CartListResponse
 import com.example.lookey.data.model.CartRemoveRequest
@@ -10,6 +11,7 @@ import com.example.lookey.ui.viewmodel.CartLine
 class CartRepository(private val apiService: ApiService) {
 
     suspend fun getCartList(): List<CartLine> {
+        Log.d("CartRepo", "Current token: ${TokenProvider.token?.take(20)}...")
         val response = apiService.getCartList()
         Log.d("CartRepo", "Response: $response")
         if (response.isSuccessful) {
@@ -39,7 +41,9 @@ class CartRepository(private val apiService: ApiService) {
 
 
     suspend fun addCartItem(productId: Int): Boolean {
+        Log.d("CartRepo", "Current token for add: ${TokenProvider.token?.take(20)}...")
         val response = apiService.addToCart(CartAddRequest(productId))
+        Log.d("CartRepo", "Add cart response: ${response.code()}")
         return response.isSuccessful
     }
 
