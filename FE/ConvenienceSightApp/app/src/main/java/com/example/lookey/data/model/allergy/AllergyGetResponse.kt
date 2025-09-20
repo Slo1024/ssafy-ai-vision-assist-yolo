@@ -2,12 +2,13 @@
 package com.example.lookey.data.model.allergy
 
 data class AllergyNameDto(
-    val allergy_id: Long,
-    val name: String
+    val allergyId: Long,
+    val allergyListId: Long,
+    val allergyName: String
 )
 
 data class AllergyListResult(
-    val names: List<AllergyNameDto>
+    val items: List<AllergyNameDto>
 )
 
 data class AllergyGetResponse(

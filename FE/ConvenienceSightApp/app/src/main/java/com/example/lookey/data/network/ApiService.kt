@@ -81,9 +81,21 @@ interface ApiService {
         @Body body: AllergyPostRequest
     ): Response<AllergyAddResponse>
 
+    @POST("api/v1/allergy")
+    suspend fun addAllergyWithAuth(
+        @Header("Authorization") authorization: String,
+        @Body body: AllergyPostRequest
+    ): Response<AllergyAddResponse>
+
     // ---- 알레르기: 삭제 (body에 allergy_id 담아 보냄) ----
     @HTTP(method = "DELETE", path = "api/v1/allergy", hasBody = true)
     suspend fun deleteAllergy(
+        @Body body: AllergyDeleteRequest
+    ): Response<AllergyDeleteResponse>
+
+    @HTTP(method = "DELETE", path = "api/v1/allergy", hasBody = true)
+    suspend fun deleteAllergyWithAuth(
+        @Header("Authorization") authorization: String,
         @Body body: AllergyDeleteRequest
     ): Response<AllergyDeleteResponse>
 

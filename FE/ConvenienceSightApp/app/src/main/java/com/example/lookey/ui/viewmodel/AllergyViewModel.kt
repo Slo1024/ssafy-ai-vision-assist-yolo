@@ -1,6 +1,6 @@
 package com.example.lookey.ui.viewmodel
 
-
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.lookey.domain.entity.Allergy
@@ -32,10 +32,18 @@ class AllergyViewModel(
     private var lastQuery: String? = null        // ✅ 같은 쿼리 중복 방지
 
     fun load() = viewModelScope.launch {
+        Log.d("AllergyVM", "load() called")
         _state.update { it.copy(loading = true, message = null) }
         runCatching { repo.list() }
-            .onSuccess { list -> _state.update { it.copy(loading = false, myAllergies = list) } }
-            .onFailure { e -> _state.update { it.copy(loading = false, message = cleanMsg(e)) } }
+            .onSuccess { list ->
+                Log.d("AllergyVM", "load() success: ${list.size} items")
+                list.forEach { Log.d("AllergyVM", "Item: ${it.name} (id=${it.id}, listId=${it.allergyListId})") }
+                _state.update { it.copy(loading = false, myAllergies = list) }
+            }
+            .onFailure { e ->
+                Log.e("AllergyVM", "load() failed: ${e.message}")
+                _state.update { it.copy(loading = false, message = cleanMsg(e)) }
+            }
     }
 
     fun updateQuery(q: String) {
@@ -74,17 +82,54 @@ class AllergyViewModel(
 
 
 
-    fun add(allergyId: Long) = viewModelScope.launch {
-        runCatching { repo.add(allergyId) }
-            .onSuccess { load() }
-            .onFailure { e -> _state.update { it.copy(message = cleanMsg(e)) } }
+    fun add(allergyListId: Long) = viewModelScope.launch {
+        Log.d("AllergyVM", "add() called with allergyListId: $allergyListId")
+        _state.update { it.copy(loading = true, message = null) }
+        try {
+            repo.add(allergyListId) // allergyListId 사용
+            Log.d("AllergyVM", "add() API call successful")
+            // 성공 시 즉시 검색 결과 초기화하고 내 알러지 목록 새로고침
+            _state.update { it.copy(suggestions = emptyList(), query = "") }
+
+            // 리스트 다시 로드
+            Log.d("AllergyVM", "Reloading list after add...")
+            runCatching { repo.list() }
+                .onSuccess { list ->
+                    Log.d("AllergyVM", "Reload after add success: ${list.size} items")
+                    _state.update { it.copy(loading = false, myAllergies = list) }
+                }
+                .onFailure { e ->
+                    Log.e("AllergyVM", "Reload after add failed: ${e.message}")
+                    _state.update { it.copy(loading = false, message = cleanMsg(e)) }
+                }
+        } catch (e: Exception) {
+            Log.e("AllergyVM", "add() failed: ${e.message}")
+            _state.update { it.copy(loading = false, message = cleanMsg(e)) }
+        }
     }
 
-    fun delete(allergyId: Long) = viewModelScope.launch {
-        val before = _state.value.myAllergies
-        _state.update { it.copy(myAllergies = before.filterNot { a -> a.id == allergyId }) }
-        runCatching { repo.delete(allergyId) }
-            .onFailure { e -> _state.update { it.copy(myAllergies = before, message = cleanMsg(e)) } }
+    fun delete(allergyListId: Long) = viewModelScope.launch {
+        Log.d("AllergyVM", "delete() called with allergyListId: $allergyListId")
+        _state.update { it.copy(loading = true, message = null) }
+        try {
+            repo.delete(allergyListId) // allergyListId 사용
+            Log.d("AllergyVM", "delete() API call successful")
+
+            // 리스트 다시 로드
+            Log.d("AllergyVM", "Reloading list after delete...")
+            runCatching { repo.list() }
+                .onSuccess { list ->
+                    Log.d("AllergyVM", "Reload after delete success: ${list.size} items")
+                    _state.update { it.copy(loading = false, myAllergies = list) }
+                }
+                .onFailure { e ->
+                    Log.e("AllergyVM", "Reload after delete failed: ${e.message}")
+                    _state.update { it.copy(loading = false, message = cleanMsg(e)) }
+                }
+        } catch (e: Exception) {
+            Log.e("AllergyVM", "delete() failed: ${e.message}")
+            _state.update { it.copy(loading = false, message = cleanMsg(e)) }
+        }
     }
 
     fun consumeMessage() { _state.update { it.copy(message = null) } }

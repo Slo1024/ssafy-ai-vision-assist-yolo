@@ -18,6 +18,11 @@ fun AllergyScreen(
     val pill = MaterialTheme.shapes.extraLarge
     var pendingItem by remember { mutableStateOf<Long?>(null) }  // allergyId 임시 저장
 
+    // 화면 초기화 시 알러지 목록 로드
+    LaunchedEffect(Unit) {
+        vm.load()
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -56,7 +61,7 @@ fun AllergyScreen(
                 state.myAllergies.forEach { a ->
                     PillListItem(
                         title = a.name,
-                        onDelete = { vm.delete(a.id) },
+                        onDelete = { vm.delete(a.allergyListId) },
                         shape = pill
                     )
                 }
@@ -71,7 +76,7 @@ fun AllergyScreen(
                     items = state.suggestions.map { it.name },
                     onClick = { name ->
                         val item = state.suggestions.find { it.name == name }
-                        pendingItem = item?.id
+                        pendingItem = item?.allergyListId
                     },
                     shape = pill
                 )
@@ -85,16 +90,23 @@ fun AllergyScreen(
 
     // ✅ 추가 확인 다이얼로그
     if (pendingItem != null) {
-        val item = state.suggestions.find { it.id == pendingItem }
+        val item = state.suggestions.find { it.allergyListId == pendingItem }
         if (item != null) {
             ConfirmDialog(
                 message = "${item.name}를\n내 알레르기에\n추가하시겠습니까?",
                 onConfirm = {
-                    vm.add(item.id)
-                    pendingItem = null
+                    pendingItem = null  // 먼저 모달 닫기
+                    vm.add(item.allergyListId)
                 },
                 onDismiss = { pendingItem = null }
             )
+        }
+    }
+
+    // 검색 결과가 비워지면 pendingItem도 초기화 (추가 후 자동으로 모달 닫힘)
+    LaunchedEffect(state.suggestions) {
+        if (state.suggestions.isEmpty() && state.query.isEmpty()) {
+            pendingItem = null
         }
     }
 
