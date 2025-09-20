@@ -37,4 +37,7 @@ class TtsController(private val context: Context) : TextToSpeech.OnInitListener 
     fun shutdown() {
         tts?.shutdown()
     }
+
+    fun stop() { tts?.stop() }
+
 }
