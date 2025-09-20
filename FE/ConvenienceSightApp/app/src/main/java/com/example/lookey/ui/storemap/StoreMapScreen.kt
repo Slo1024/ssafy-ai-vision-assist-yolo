@@ -25,24 +25,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-data class Store(
-    val name: String,
-    val distanceMeters: Int,
-    val lat: Double,
-    val lng: Double
-)
-
-// 더미 데이터
-val dummyStores = listOf(
-    Store("CU 녹산공단점", 300, 35.09569, 128.85650),
-    Store("이마트24 녹산공단점", 500, 35.09510, 128.85801),
-    Store("세븐일레븐 녹산공단점", 1000, 35.09431, 128.85942)
-)
-
 @Composable
 fun StoreListScreen(
-    stores: List<Store>,
-    onStoreClick: (Store) -> Unit
+    stores: List<StoreUiModel>,
+    onStoreClick: (StoreUiModel) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -215,16 +201,16 @@ fun openKakaoRoute(ctx: Context, lat: Double, lng: Double, name: String) {
     }
 }
 
-@Composable
-fun DummyStoreListPage(context: Context = LocalContext.current) {
-    StoreListScreen(
-        stores = dummyStores,
-        onStoreClick = { s -> openKakaoRoute(context, s.lat, s.lng, s.name) }
-    )
-}
-
-@Preview(showBackground = true, widthDp = 360, heightDp = 740)
-@Composable
-private fun PreviewStoreList() {
-    StoreListScreen(stores = dummyStores, onStoreClick = {})
-}
+//@Composable
+//fun DummyStoreListPage(context: Context = LocalContext.current) {
+//    StoreListScreen(
+//        stores = dummyStores,
+//        onStoreClick = { s -> openKakaoRoute(context, s.lat, s.lng, s.name) }
+//    )
+//}
+//
+//@Preview(showBackground = true, widthDp = 360, heightDp = 740)
+//@Composable
+//private fun PreviewStoreList() {
+//    StoreListScreen(stores = dummyStores, onStoreClick = {})
+//}

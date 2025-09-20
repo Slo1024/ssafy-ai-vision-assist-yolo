@@ -21,6 +21,8 @@ public class PathController {
             @RequestParam(required = false) Double lat,
             @RequestParam(required = false) Double lng
     ) {
+        log.info("[PathController] 요청 수신 lat={}, lng={}", lat, lng);
+
         try {
             // 필수 파라미터 검증
             if (lat == null) {

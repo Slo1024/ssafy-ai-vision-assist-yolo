@@ -46,6 +46,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/carts/**").authenticated() // 장바구니 관련
                         .requestMatchers("/api/v1/product/**").authenticated() // 상품 관련 (검색 제외)
                         .requestMatchers("/api/v1/vision/**").permitAll() // Vision API - 임시 permit
+                        .requestMatchers("/api/v1/path/**").permitAll() // 지도
+
 
                         // 나머지는 인증 필요
                         .anyRequest().authenticated()
