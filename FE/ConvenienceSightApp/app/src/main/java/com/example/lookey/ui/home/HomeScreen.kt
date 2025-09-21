@@ -139,28 +139,24 @@ private fun SpeakIntroOncePerEntry(
     userName: String
 ) {
     val context = LocalContext.current
-    val view = LocalView.current
-    val a11y = LocalAccessibilityManager.current   // ✅ 추가
     var spoken by rememberSaveable { mutableStateOf(false) }
 
     val message = "${userName}님, LooKey 홈입니다. 편의점 찾기, 상품 찾기, 장바구니, 알레르기, 설정, 사용법 버튼이 있습니다. 화면을 아래로 스크롤할 수 있습니다."
 
+    // 화면 떠날 때 남은 음성 끊기
     DisposableEffect(Unit) { onDispose { tts.stop() } }
 
     LaunchedEffect(Unit) {
         if (spoken) return@LaunchedEffect
         spoken = true
 
-        if (A11y.isScreenReaderOn(context)) {
-            delay(400)
-            // 300~600ms 권장
-            view.announceForAccessibility(message)     // ✅ Compose 방식
-        } else {
-            delay(150)
-            tts.speak(message)
-        }
+        // ✅ TalkBack 켜져 있으면 더 길게 기다렸다가 우리 TTS 실행
+        val delayMs = if (A11y.isScreenReaderOn(context)) 1200L else 150L
+        kotlinx.coroutines.delay(delayMs)
+        tts.speak(message, flush = true)   // 항상 앱 TTS로 읽음
     }
 }
+
 
 private data class Action(
     val label: String,
