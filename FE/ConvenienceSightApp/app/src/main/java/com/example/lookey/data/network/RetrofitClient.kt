@@ -17,12 +17,12 @@ import com.example.lookey.BuildConfig
 
 
 object RetrofitClient {
-    private const val BASE_URL = BuildConfig.API_BASE_URL
+    private val BASE_URL = BuildConfig.API_BASE_URL
 
     var authListener: AuthListener? = null
 
-    private val gson = GsonBuilder()
-        .create()
+//    private val gson = GsonBuilder()
+//        .create()
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS) // 연결 타임아웃 30초
@@ -100,11 +100,11 @@ object RetrofitClient {
         }
     }
 
-    val api: ApiService by lazy {
-        Retrofit.Builder()
-            .baseUrl(BASE_URL)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(ApiService::class.java)
-    }
+//    val api: ApiService by lazy {
+//        Retrofit.Builder()
+//            .baseUrl(BASE_URL)
+//            .addConverterFactory(GsonConverterFactory.create())
+//            .build()
+//            .create(ApiService::class.java)
+//    }
 }

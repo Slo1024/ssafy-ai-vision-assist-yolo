@@ -1,7 +1,6 @@
 // app/build.gradle.kts
 import java.util.Properties
 import java.io.FileInputStream
-import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -82,10 +81,7 @@ android {
     }
 
 
-    buildFeatures {
-        compose = true
-        buildConfig = true   // BuildConfig 활성화
-    }
+
 }
 
 
