@@ -52,10 +52,12 @@ interface ApiService {
     ): Response<ApiResponse<LocationSearchResult>>
 
     // AI-001: JSON 버전 추가 (스웨거 기준)
+    @Multipart
     @POST("api/v1/vision/ai/analyze")
-    suspend fun navGuideJson(
-        @Body body: Map<String, String>   // { "file": "<base64>" }
+    suspend fun navGuideMultipart(
+        @Part file: MultipartBody.Part
     ): Response<VisionAnalyzeResponse>
+
 
     // 기존 multipart 메서드도 유지(서버가 멀티파트 허용 시 사용)
     @Multipart
