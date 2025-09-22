@@ -9,7 +9,7 @@ data class LocationSearchResult(
 ) {
     data class Target(
         @SerializedName("name") val name: String?,
-        @SerializedName("direction_bucket") val directionBucket: String?
+        @SerializedName("directionBucket") val directionBucket: String?
     )
     data class Info(
         @SerializedName("name") val name: String?,

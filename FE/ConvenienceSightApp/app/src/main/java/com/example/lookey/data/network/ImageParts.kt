@@ -113,7 +113,7 @@ fun Bitmap.toJpegMaxUnderSize(
 }
 
 // --------- PRODUCT-005 ---------
-// 요청 사양: "shelf_images" 정확히 1장 (JPEG 800x600, 품질 75~80, 1MB 이하)
+// 요청 사양: "file" 필드명 사용 (Swagger 기준)
 fun buildShelfImagePart(cacheDir: File, bmp: Bitmap): MultipartBody.Part {
     val f = bmp.toJpegUnderSize(
         tmpDir = cacheDir,
@@ -124,7 +124,8 @@ fun buildShelfImagePart(cacheDir: File, bmp: Bitmap): MultipartBody.Part {
         minQuality = 75,
         maxBytes = 1_000_000
     )
-    return MultipartBody.Part.createFormData("shelf_images", f.name, f.asRequestBody(JPEG))
+    // Swagger에서 사용하는 필드명 "file"로 변경
+    return MultipartBody.Part.createFormData("file", f.name, f.asRequestBody(JPEG))
 }
 
 /** (구 스펙 호환용) 더 이상 사용하지 마세요. 005는 1장만 허용됩니다. */
