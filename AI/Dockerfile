@@ -4,39 +4,12 @@ FROM python:3.10-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies for OpenCV and ML libraries
+# Install minimal system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     wget \
     git \
-    curl \
-    # OpenCV dependencies
-    libgl1-mesa-glx \
-    libgl1-mesa-dri \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
-    libgomp1 \
-    libgthread-2.0-0 \
-    libgtk-3-0 \
-    # Video/Image processing
-    libavcodec-dev \
-    libavformat-dev \
-    libswscale-dev \
-    libv4l-dev \
-    libxvidcore-dev \
-    libx264-dev \
-    libjpeg-dev \
-    libpng-dev \
-    libtiff-dev \
-    # Math libraries
-    libatlas-base-dev \
-    libopenblas-dev \
-    liblapack-dev \
-    # Python development
-    python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
