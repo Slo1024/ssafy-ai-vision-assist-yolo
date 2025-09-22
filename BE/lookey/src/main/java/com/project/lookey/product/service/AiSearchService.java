@@ -1,6 +1,5 @@
 package com.project.lookey.product.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.lookey.product.dto.CurrentFrameResponse;
 import com.project.lookey.product.dto.ProductDirectionResponse;
 import com.project.lookey.product.dto.ShelfData;
