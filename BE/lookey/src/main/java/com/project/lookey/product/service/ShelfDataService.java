@@ -1,5 +1,6 @@
 package com.project.lookey.product.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.lookey.product.dto.ShelfData;
 import com.project.lookey.product.dto.ShelfDetectionResponse;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,8 @@ public class ShelfDataService {
 
     @Qualifier("productRedisTemplate")
     private final RedisTemplate<String, Object> redisTemplate;
+
+    private final ObjectMapper objectMapper;
 
     private static final String SHELF_DATA_KEY_PREFIX = "shelf_data:";
     private static final long TTL_MINUTES = 30;
@@ -49,21 +52,49 @@ public class ShelfDataService {
     public ShelfData getShelfData(Integer userId) {
         try {
             String key = generateKey(userId);
-            ShelfData shelfData = (ShelfData) redisTemplate.opsForValue().get(key);
+            Object rawData = redisTemplate.opsForValue().get(key);
+
+            if (rawData == null) {
+                log.info("매대 데이터 없음 - userId: {}", userId);
+                return null;
+            }
+
+            // ObjectMapper를 사용해서 안전하게 변환
+            ShelfData shelfData = objectMapper.convertValue(rawData, ShelfData.class);
 
             if (shelfData != null) {
                 log.info("매대 데이터 조회 성공 - userId: {}, 상품 개수: {}", userId, shelfData.items().size());
-            } else {
-                log.info("매대 데이터 없음 - userId: {}", userId);
             }
 
             return shelfData;
         } catch (Exception e) {
-            log.error("매대 데이터 조회 실패 - userId: {}", userId, e);
+            log.error("매대 데이터 조회 실패 - userId: {}, 캐시 데이터 삭제", userId, e);
+            // 직렬화 오류가 발생한 경우 해당 캐시 데이터를 삭제
+            try {
+                String key = generateKey(userId);
+                redisTemplate.delete(key);
+                log.info("손상된 캐시 데이터 삭제 완료 - userId: {}", userId);
+            } catch (Exception deleteEx) {
+                log.error("캐시 데이터 삭제 실패 - userId: {}", userId, deleteEx);
+            }
             return null;
         }
     }
 
+
+    /**
+     * 사용자의 매대 데이터 삭제 (캐시 초기화)
+     * @param userId 사용자 ID
+     */
+    public void clearShelfData(Integer userId) {
+        try {
+            String key = generateKey(userId);
+            redisTemplate.delete(key);
+            log.info("매대 데이터 삭제 완료 - userId: {}", userId);
+        } catch (Exception e) {
+            log.error("매대 데이터 삭제 실패 - userId: {}", userId, e);
+        }
+    }
 
     /**
      * Redis 키 생성

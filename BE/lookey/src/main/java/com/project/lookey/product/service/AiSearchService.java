@@ -6,7 +6,10 @@ import com.project.lookey.product.dto.ShelfData;
 import com.project.lookey.product.dto.ShelfDetectionResponse;
 import com.project.lookey.product.dto.ShelfItem;
 import com.project.lookey.product.entity.Product;
+import com.project.lookey.product.entity.ProductAllergy;
 import com.project.lookey.product.repository.ProductRepository;
+import com.project.lookey.product.repository.ProductAllergyRepository;
+import com.project.lookey.allergy.repository.AllergyRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,6 +36,8 @@ public class AiSearchService {
 
     private final WebClient webClient;
     private final ProductRepository productRepository;
+    private final ProductAllergyRepository productAllergyRepository;
+    private final AllergyRepository allergyRepository;
     private final ShelfDataService shelfDataService;
 
     @Value("${ai.search.url}")
@@ -90,6 +95,15 @@ public class AiSearchService {
 
             if (response == null || response.items() == null) {
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "AI 서버에서 올바른 응답을 받지 못했습니다.");
+            }
+
+            // AI 응답의 모든 상품 상세 로깅
+            log.info("🤖 AI 서버 전체 응답 상세:");
+            log.info("  - 전체 감지된 상품 개수: {}", response.items().size());
+            for (int i = 0; i < response.items().size(); i++) {
+                ShelfItem item = response.items().get(i);
+                log.info("  - 상품 #{}: 이름='{}', x={}, y={}, w={}, h={}",
+                    i+1, item.name(), item.x(), item.y(), item.w(), item.h());
             }
 
             return response;
@@ -158,7 +172,7 @@ public class AiSearchService {
             CurrentFrameResponse currentFrameResponse = callLocationAI(currentFrame);
 
             // 3단계: 매대 데이터와 현재 화면 비교하여 위치 계산
-            ProductDirectionResponse.Result result = calculateLocationResult(shelfData, currentFrameResponse, productName);
+            ProductDirectionResponse.Result result = calculateLocationResult(shelfData, currentFrameResponse, productName, userId);
 
             log.info("상품 위치 안내 완료 - userId: {}, 상품: {}, 결과: {}", userId, productName, result.caseType());
 
@@ -174,20 +188,66 @@ public class AiSearchService {
     }
 
     private Optional<Product> findProductByName(String productName) {
+        log.debug("상품 검색 시작 - 입력: '{}'", productName);
+
         // 먼저 정확한 상품명으로 조회
         Optional<Product> exactMatch = productRepository.findByName(productName);
         if (exactMatch.isPresent()) {
+            log.debug("정확한 매칭 성공 - 상품: {}", exactMatch.get().getName());
             return exactMatch;
         }
 
         // 정확한 매칭이 없으면 부분 매칭으로 조회
         List<ProductRepository.NameView> products = productRepository.findNamesByKeyword(productName);
+        log.debug("부분 매칭 결과 - 개수: {}", products.size());
+
         if (!products.isEmpty()) {
             // 첫 번째 매칭 상품의 ID로 전체 정보 조회
-            return productRepository.findById(products.get(0).getId());
+            ProductRepository.NameView nameView = products.get(0);
+            log.debug("부분 매칭된 상품 - ID: {}, 이름: {}", nameView.getId(), nameView.getName());
+            return productRepository.findById(nameView.getId());
         }
 
+        log.debug("상품을 찾을 수 없음 - 입력: '{}'", productName);
         return Optional.empty();
+    }
+
+    /**
+     * 상품에 대한 사용자의 알레르기 여부 체크
+     * @param product 상품 엔티티
+     * @param userId 사용자 ID
+     * @return 알레르기가 있으면 true, 없으면 false
+     */
+    private boolean checkUserAllergy(Product product, Integer userId) {
+        try {
+            // 1. 해당 상품이 포함하는 알레르기 목록 조회
+            List<ProductAllergy> productAllergies = productAllergyRepository.findByProduct(product);
+
+            if (productAllergies.isEmpty()) {
+                log.debug("상품에 알레르기 정보 없음 - 상품: {}", product.getName());
+                return false;
+            }
+
+            // 2. 상품의 각 알레르기에 대해 사용자가 해당 알레르기를 가지고 있는지 확인
+            for (ProductAllergy productAllergy : productAllergies) {
+                Long allergyListId = productAllergy.getAllergy().getId();
+                boolean userHasAllergy = allergyRepository.existsByUser_IdAndAllergyList_Id(userId, allergyListId);
+
+                if (userHasAllergy) {
+                    log.info("사용자 알레르기 감지 - 상품: '{}', 알레르기: '{}', 사용자: {}",
+                            product.getName(), productAllergy.getAllergy().getName(), userId);
+                    return true;
+                }
+            }
+
+            log.debug("사용자 알레르기 없음 - 상품: '{}', 사용자: {}", product.getName(), userId);
+            return false;
+
+        } catch (Exception e) {
+            log.error("알레르기 체크 중 오류 - 상품: '{}', 사용자: {}", product.getName(), userId, e);
+            // 오류 발생 시 안전을 위해 false 반환 (알레르기 없음으로 처리)
+            return false;
+        }
     }
 
     /**
@@ -219,6 +279,9 @@ public class AiSearchService {
             if (response == null) {
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "AI 서버에서 응답을 받지 못했습니다.");
             }
+
+            log.info("AI 서버 전체 응답 - multiple: {}, items: {}, items 개수: {}",
+                    response.multiple(), response.items(), response.items() != null ? response.items().size() : 0);
 
             return response;
 
@@ -272,9 +335,9 @@ public class AiSearchService {
         // Y축 방향 판단 (겹치지 않을 때만)
         if (!verticalOverlap) {
             if (targetTop > currentBottom) {
-                vertical = "아래";
-            } else if (targetBottom < currentTop) {
                 vertical = "위";
+            } else if (targetBottom < currentTop) {
+                vertical = "아래";
             }
         }
 
@@ -293,10 +356,14 @@ public class AiSearchService {
     /**
      * 매대 데이터와 현재 화면을 비교하여 위치 계산
      */
-    private ProductDirectionResponse.Result calculateLocationResult(ShelfData shelfData, CurrentFrameResponse currentFrame, String productName) {
+    private ProductDirectionResponse.Result calculateLocationResult(ShelfData shelfData, CurrentFrameResponse currentFrame, String productName, Integer userId) {
         if (shelfData == null || shelfData.items() == null || shelfData.items().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "저장된 매대 정보가 없습니다. 먼저 매대를 스캔해주세요.");
         }
+
+        // AI 응답 로그 추가
+        log.info("AI 응답 분석 - multiple: {}, items: {}, 찾는 상품: {}",
+                currentFrame.multiple(), currentFrame.items(), productName);
 
         // 매대에서 타겟 상품 찾기
         ShelfItem targetProduct = shelfData.items().stream()
@@ -304,8 +371,10 @@ public class AiSearchService {
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 상품이 매대에서 발견되지 않았습니다."));
 
-        // 현재 화면에 상품이 여러 개 감지된 경우
+        // 현재 화면에 상품이 여러 개 감지된 경우 (multiple: true)
         if (currentFrame.multiple()) {
+            log.info("🔄 MULTIPLE=TRUE 경로 진입 - 다중 상품 감지 모드 - 감지된 상품들: {}", currentFrame.items());
+
             // 현재 화면의 상품들을 매대 데이터와 매칭
             Optional<ShelfItem> currentProductOpt = shelfData.items().stream()
                     .filter(shelfItem -> currentFrame.items().stream()
@@ -314,36 +383,50 @@ public class AiSearchService {
 
             if (currentProductOpt.isPresent()) {
                 ShelfItem currentProduct = currentProductOpt.get();
+                log.info("매대에서 현재 위치 상품 찾음 - 현재: '{}', 목표: '{}'",
+                        currentProduct.name(), productName);
+
                 String direction = calculateDirectionWithBoundaries(targetProduct, currentProduct);
+                log.info("다중 상품 감지 - 방향 안내 반환: {}", direction);
 
                 ProductDirectionResponse.Target target = new ProductDirectionResponse.Target(productName, direction);
                 return new ProductDirectionResponse.Result("DIRECTION", target, null);
             } else {
-                // 현재 화면의 상품들이 매대 데이터에 없는 경우
+                log.error("다중 상품 감지 - 매대에서 현재 화면 상품을 찾을 수 없음: {}", currentFrame.items());
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "현재 화면의 상품들을 매대에서 찾을 수 없습니다.");
             }
         } else {
-            // 현재 화면에 상품이 1개만 감지된 경우
+            // 현재 화면에 상품이 1개만 감지된 경우 (multiple: false)
+            log.info("⭕ MULTIPLE=FALSE 경로 진입 - 단일 상품 모드");
             if (currentFrame.items().size() == 1) {
                 String detectedProduct = currentFrame.items().get(0);
+                log.info("단일 상품 감지 - AI 감지: '{}', FE 요청: '{}'", detectedProduct, productName);
 
-                // 감지된 상품이 찾고자 하는 상품과 같은지 확인
+                // AI가 감지한 상품명과 FE에서 요청한 상품명이 같은지 확인
                 if (isProductNameMatch(detectedProduct, productName)) {
-                    // 찾고자 하는 상품을 발견한 경우
+                    // 상품명이 같은 경우: SINGLE_RECOGNIZED + DB에서 상품 정보 조회
+                    log.info("상품명 매칭 성공 - DB에서 상품 정보 조회 시작: {}", productName);
                     Optional<Product> productOpt = findProductByName(productName);
                     if (productOpt.isPresent()) {
                         Product product = productOpt.get();
+                        log.info("상품 DB 조회 성공 - 이름: {}, 가격: {}, 이벤트: {}",
+                                product.getName(), product.getPrice(), product.getEvent());
+
+                        // 사용자 알레르기 체크
+                        boolean hasAllergy = checkUserAllergy(product, userId);
+
                         ProductDirectionResponse.Info info = new ProductDirectionResponse.Info(
                                 product.getName(),
                                 product.getPrice(),
                                 product.getEvent(),
-                                false // allergy 정보는 현재 Product 엔티티에 없으므로 기본값
+                                hasAllergy
                         );
                         return new ProductDirectionResponse.Result("SINGLE_RECOGNIZED", null, info);
                     } else {
-                        // 상품 정보를 찾을 수 없는 경우 기본 정보 반환
+                        log.warn("상품 DB 조회 실패 - 상품명: {}", productName);
+                        // DB에서 찾지 못한 경우도 SINGLE_RECOGNIZED로 반환 (알레르기 정보 없음)
                         ProductDirectionResponse.Info info = new ProductDirectionResponse.Info(
-                                detectedProduct,
+                                productName,
                                 null,
                                 null,
                                 false
@@ -351,7 +434,10 @@ public class AiSearchService {
                         return new ProductDirectionResponse.Result("SINGLE_RECOGNIZED", null, info);
                     }
                 } else {
-                    // 다른 상품이 감지된 경우, 매대 데이터에서 해당 상품 찾기
+                    // 상품명이 다른 경우: DIRECTION + 매대 데이터 기반 방향 안내
+                    log.info("상품명 다름 - 방향 안내 모드로 전환");
+
+                    // 매대 데이터에서 AI가 감지한 상품 찾기
                     Optional<ShelfItem> currentProductOpt = shelfData.items().stream()
                             .filter(item -> isProductNameMatch(item.name(), detectedProduct))
                             .findFirst();
@@ -359,14 +445,18 @@ public class AiSearchService {
                     if (currentProductOpt.isPresent()) {
                         ShelfItem currentProduct = currentProductOpt.get();
                         String direction = calculateDirectionWithBoundaries(targetProduct, currentProduct);
+                        log.info("방향 계산 완료 - 현재: '{}', 목표: '{}', 방향: '{}'",
+                                detectedProduct, productName, direction);
 
                         ProductDirectionResponse.Target target = new ProductDirectionResponse.Target(productName, direction);
                         return new ProductDirectionResponse.Result("DIRECTION", target, null);
                     } else {
+                        log.error("매대 데이터에서 AI 감지 상품을 찾을 수 없음 - 감지된 상품: '{}'", detectedProduct);
                         throw new ResponseStatusException(HttpStatus.NOT_FOUND, "현재 화면의 상품을 매대에서 찾을 수 없습니다.");
                     }
                 }
             } else {
+                log.error("현재 화면에서 상품 감지 실패 - 감지된 상품 개수: {}", currentFrame.items().size());
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "현재 화면에서 상품을 감지할 수 없습니다.");
             }
         }
