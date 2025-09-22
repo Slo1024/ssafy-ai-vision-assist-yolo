@@ -12,36 +12,23 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.Color
-import com.example.lookey.R
-import com.example.lookey.core.platform.tts.TtsController
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-// ✅ 추가 import
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
-import androidx.core.view.ViewCompat
-import com.example.lookey.core.platform.accessibility.A11y
-import kotlinx.coroutines.delay
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalAccessibilityManager
-
+import com.example.lookey.R
 
 @Composable
 fun HomeScreen(
-    tts: TtsController,
     userNameState: MutableState<String>,
     onAllergy: () -> Unit = {},
     onFindStore: () -> Unit = {},
@@ -50,17 +37,6 @@ fun HomeScreen(
     onSettings: () -> Unit = {},
     onGuide: () -> Unit = {},
 ) {
-    // ⛔ 겹침 유발: 기존 LaunchedEffect 제거
-    // LaunchedEffect(Unit) {
-    //     tts.speak("LooKey 홈입니다 ...")
-    // }
-
-    // ✅ 겹침 방지 + TalkBack 우선 처리
-    SpeakIntroOncePerEntry(
-        tts = tts,
-        userName = userNameState.value
-    )
-
     val tiles = listOf(
         Action("편의점\n찾기", R.drawable.ic_map, onFindStore),
         Action("상품 찾기", R.drawable.ic_scan, onFindProduct),
@@ -132,31 +108,6 @@ fun HomeScreen(
         }
     }
 }
-
-@Composable
-private fun SpeakIntroOncePerEntry(
-    tts: TtsController,
-    userName: String
-) {
-    val context = LocalContext.current
-    var spoken by rememberSaveable { mutableStateOf(false) }
-
-    val message = "${userName}님, LooKey 홈입니다. 편의점 찾기, 상품 찾기, 장바구니, 알레르기, 설정, 사용법 버튼이 있습니다. 화면을 아래로 스크롤할 수 있습니다."
-
-    // 화면 떠날 때 남은 음성 끊기
-    DisposableEffect(Unit) { onDispose { tts.stop() } }
-
-    LaunchedEffect(Unit) {
-        if (spoken) return@LaunchedEffect
-        spoken = true
-
-        // ✅ TalkBack 켜져 있으면 더 길게 기다렸다가 우리 TTS 실행
-        val delayMs = if (A11y.isScreenReaderOn(context)) 1200L else 150L
-        kotlinx.coroutines.delay(delayMs)
-        tts.speak(message, flush = true)   // 항상 앱 TTS로 읽음
-    }
-}
-
 
 private data class Action(
     val label: String,
