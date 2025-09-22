@@ -20,8 +20,8 @@ object RetrofitClient {
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
         .hostnameVerifier { _, _ -> true }
         .addInterceptor { chain ->
             val original = chain.request()
@@ -36,9 +36,14 @@ object RetrofitClient {
                 if (!token.isNullOrEmpty()) TokenProvider.token = token
             }
 
-            token?.let { builder.addHeader("Authorization", "Bearer $it") }
+            token?.let {
+                builder.addHeader("Authorization", "Bearer $it")
+                Log.d("RetrofitClient", "=== Authorization 헤더 추가됨 === Bearer $it")
+            } ?: Log.w("RetrofitClient", "=== JWT 토큰 없음 ===")
 
             var request = builder.build()
+            Log.d("RetrofitClient", "=== Sending request to ${request.url} ===")
+
             var response = chain.proceed(request)
 
             if (response.code == 401) {

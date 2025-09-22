@@ -2,6 +2,7 @@
 package com.example.lookey.data.network
 
 import android.graphics.Bitmap
+import android.util.Log
 import com.example.lookey.data.model.ApiResponse
 import com.example.lookey.data.model.LoginResponse
 import com.example.lookey.data.remote.dto.navigation.VisionAnalyzeResponse
@@ -10,6 +11,9 @@ import com.example.lookey.data.remote.dto.product.ShelfSearchResult
 import okhttp3.MultipartBody
 import retrofit2.Response
 import java.io.File
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.asRequestBody
+
 
 
 class Repository {
@@ -42,17 +46,29 @@ class Repository {
         return r2.bodyOrThrow()
     }
 
-    // AI-001: JSON 우선
-    suspend fun navGuide(cacheDir: File, frame: Bitmap): VisionAnalyzeResponse {
-        val b64 = frame.toBase64Jpeg(800, 600, 80)  // 서버가 해상도 제한 없다면 800x600 유지로 충분
-        val r1 = api.navGuideJson(mapOf("file" to b64))
-        if (r1.isSuccessful) return r1.bodyOrThrow()
+    // AI-001:
+    suspend fun navGuide(cacheDir: File, bitmap: Bitmap): VisionAnalyzeResponse? {
+        // Bitmap → File
+        val file = File(cacheDir, "nav_image.jpg").apply {
+            outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 50, it) }
+        }
 
-        // 서버가 멀티파트 허용할 때를 대비한 폴백
-        val part = buildNavImagePart(cacheDir, frame)
-        val r2 = api.navGuide(part)
-        return r2.bodyOrThrow()
+        // 📌 파일 크기 확인 (추가 부분)
+        val fileSizeInKB = file.length() / 1024
+        val fileSizeInMB = fileSizeInKB / 1024
+        Log.d("UploadImage", "Image size before upload: ${fileSizeInKB}KB (${fileSizeInMB}MB)")
+
+        // File → MultipartBody.Part
+        val requestFile = file.asRequestBody("image/jpeg".toMediaTypeOrNull())
+        val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
+
+        // Retrofit 호출
+        val response = NoAuthRetrofitClient.apiService.navGuideMultipart(body)
+        return response.body()
     }
+
+
+
 
 }
 
