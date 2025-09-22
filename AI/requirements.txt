@@ -1,15 +1,28 @@
+# FastAPI and web server
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
-torch>=2.0.0
-torchvision>=0.15.0
-Pillow==10.0.1
-numpy==1.24.3
-opencv-python==4.8.1.78
-transformers==4.35.0
-git+https://github.com/openai/CLIP.git
-pydantic==2.4.2
-python-jose[cryptography]==3.3.0
-aiofiles==23.2.1
-ultralytics
-python-dotenv
+aiofiles==24.1.0
+python-dotenv==1.0.1
+
+# Machine Learning and AI
+torch==2.4.1
+torchvision==0.19.1
+transformers==4.52.4
+open-clip-torch==2.24.0
+ultralytics==8.3.27
+sentence-transformers==4.1.0
+
+# Image processing
+Pillow==10.4.0
+opencv-python==4.11.0.86
+albumentations==2.0.8
+
+# Data handling
+numpy==1.26.4
+pandas==2.3.1
+pydantic==2.11.7
+
+# Additional utilities
+requests==2.32.4
+tqdm==4.67.1
