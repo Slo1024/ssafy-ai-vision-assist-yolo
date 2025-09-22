@@ -37,7 +37,7 @@ public class ProductController {
     @PostMapping(value = "/search", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> searchShelf(
             @AuthenticationPrincipal CustomOAuth2User principal,
-            @RequestPart("shelf_images") MultipartFile shelfImage
+            @RequestPart("file") MultipartFile shelfImage
     ) {
         Integer userId = principal.getUserId();
         try {

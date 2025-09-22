@@ -1,3 +1,7 @@
+// app/build.gradle.kts
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -12,6 +16,28 @@ android {
     compileSdk = 35
 
     defaultConfig {
+
+        // 1) local.properties에서 읽기
+        val props = Properties().apply {
+            val f = rootProject.file("local.properties")
+            if (f.exists()) FileInputStream(f).use { load(it) }
+        }
+
+        // 2) 값이 없으면 환경변수로 대체(선택)
+        val apiBaseUrlRaw = props.getProperty("API_BASE_URL")
+            ?: System.getenv("API_BASE_URL")
+
+        check(!apiBaseUrlRaw.isNullOrBlank()) {
+            "Missing API_BASE_URL. Put it in local.properties or export as environment variable."
+        }
+
+        // 3) 끝에 슬래시 보장
+        val apiBaseUrl = if (apiBaseUrlRaw!!.endsWith("/")) apiBaseUrlRaw else "$apiBaseUrlRaw/"
+
+        // 4) BuildConfig에 주입
+        buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+
+
         applicationId = "com.example.lookey"
         minSdk = 26
         targetSdk = 35
@@ -19,6 +45,8 @@ android {
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+
+
 
     buildTypes {
         debug {
@@ -36,6 +64,11 @@ android {
         }
     }
 
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
+
 
     // JDK 17 권장
     compileOptions {
@@ -48,10 +81,7 @@ android {
     }
 
 
-    buildFeatures {
-        compose = true
-        buildConfig = true   // BuildConfig 활성화
-    }
+
 }
 
 

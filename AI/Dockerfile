@@ -4,18 +4,14 @@ FROM python:3.10-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install minimal system dependencies including GL library for OpenCV
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
-    libgl1-mesa-dri \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
-    libgomp1 \
     wget \
     git \
+    libgl1-mesa-dev \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
@@ -39,6 +35,10 @@ RUN chmod -R 755 /app && \
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 ENV MODEL_PATH=/models/clip_linear_head.pt
+# Force OpenCV to run in headless mode
+ENV OPENCV_IO_ENABLE_OPENEXR=0
+ENV OPENCV_VIDEOIO_PRIORITY_MSMF=0
+ENV QT_QPA_PLATFORM=offscreen
 
 # Create non-root user for security
 RUN useradd -m -u 1000 aiuser && \

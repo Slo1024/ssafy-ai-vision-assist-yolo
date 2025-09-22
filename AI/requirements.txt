@@ -1,15 +1,20 @@
+# Image processing (install opencv-headless first to avoid GUI version)
+opencv-python-headless==4.10.0.84
+
+# FastAPI and web server
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
-torch>=2.0.0
-torchvision>=0.15.0
-Pillow==10.0.1
-numpy==1.24.3
-opencv-python==4.8.1.78
-transformers==4.35.0
-git+https://github.com/openai/CLIP.git
-pydantic==2.4.2
-python-jose[cryptography]==3.3.0
-aiofiles==23.2.1
-ultralytics
-python-dotenv
+python-dotenv==1.0.1
+
+# Machine Learning and AI
+torch==2.4.1
+torchvision==0.19.1
+ultralytics==8.3.27
+
+# Image processing
+Pillow==10.4.0
+
+# Data handling
+numpy==1.26.4
+pydantic==2.11.7

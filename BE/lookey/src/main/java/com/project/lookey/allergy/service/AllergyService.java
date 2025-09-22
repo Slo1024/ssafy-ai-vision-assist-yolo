@@ -8,6 +8,7 @@ import com.project.lookey.allergy.dto.AllergySearchResponse;
 import com.project.lookey.allergy.entity.Allergy;
 import com.project.lookey.allergy.repository.AllergyListRepository;
 import com.project.lookey.allergy.repository.AllergyRepository;
+import com.project.lookey.common.util.SimilarityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,10 +42,34 @@ public class AllergyService {
 
     public AllergySearchResponse searchAllergies(String keyword) {
         if (keyword == null || keyword.isBlank()) return new AllergySearchResponse(java.util.List.of());
-        var allergyLists = allergyListRepository.findByNameContainingOrderByName(keyword.trim());
-        var items = allergyLists.stream()
+
+        String trimmedKeyword = keyword.trim();
+
+        // 1단계: 정확한 검색
+        var exactMatches = allergyListRepository.findByNameContainingOrderByName(trimmedKeyword);
+
+        // 2단계: 결과가 3개 미만이면 유사도 검색 추가
+        var finalResults = new ArrayList<>(exactMatches);
+        if (exactMatches.size() < 3) {
+            var allAllergies = allergyListRepository.findAll();
+
+            // 정확한 매칭에서 제외된 알러지들 중 유사한 것들 찾기
+            var similarMatches = allAllergies.stream()
+                    .filter(allergy -> !exactMatches.contains(allergy))
+                    .filter(allergy -> SimilarityUtil.isSimilar(trimmedKeyword, allergy.getName()))
+                    .sorted((a1, a2) -> Double.compare(
+                        SimilarityUtil.calculateSimilarity(trimmedKeyword, a2.getName()),
+                        SimilarityUtil.calculateSimilarity(trimmedKeyword, a1.getName())
+                    ))
+                    .limit(5)
+                    .collect(Collectors.toList());
+
+            finalResults.addAll(similarMatches);
+        }
+
+        var items = finalResults.stream()
                 .map(al -> new com.project.lookey.allergy.dto.AllergySearchItem(al.getId(), al.getName()))
-                .collect(java.util.stream.Collectors.toList());
+                .collect(Collectors.toList());
         return new AllergySearchResponse(items);
     }
 
