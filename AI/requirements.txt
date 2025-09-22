@@ -15,7 +15,7 @@ sentence-transformers==4.1.0
 
 # Image processing
 Pillow==10.4.0
-opencv-python==4.11.0.86
+opencv-python-headless==4.8.0.76
 albumentations==2.0.8
 
 # Data handling
