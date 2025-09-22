@@ -180,5 +180,6 @@ dependencies {
 
     implementation("com.squareup.retrofit2:converter-moshi:2.11.0")
     implementation("com.squareup.moshi:moshi-kotlin:1.15.0")
+    implementation("androidx.core:core-ktx:1.13.1")
 
 }

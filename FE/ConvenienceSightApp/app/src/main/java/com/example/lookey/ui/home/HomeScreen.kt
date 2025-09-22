@@ -13,25 +13,22 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.Color
-import com.example.lookey.R
-import com.example.lookey.core.platform.tts.TtsController
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.lookey.R
 
 @Composable
 fun HomeScreen(
-    tts: TtsController,
     userNameState: MutableState<String>,
     onAllergy: () -> Unit = {},
     onFindStore: () -> Unit = {},
@@ -40,10 +37,6 @@ fun HomeScreen(
     onSettings: () -> Unit = {},
     onGuide: () -> Unit = {},
 ) {
-    LaunchedEffect(Unit) {
-        tts.speak("LooKey 홈입니다. 편의점 찾기, 상품 찾기, 장바구니, 알레르기, 설정, 사용법 버튼이 있습니다. 화면을 아래로 스크롤할 수 있습니다.")
-    }
-
     val tiles = listOf(
         Action("편의점\n찾기", R.drawable.ic_map, onFindStore),
         Action("상품 찾기", R.drawable.ic_scan, onFindProduct),
@@ -83,14 +76,13 @@ fun HomeScreen(
                         text = "LooKey",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface   // #004AD1 (AppColors.Main)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
-                DropShadowDivider() // 아래 그림자 구분선
+                DropShadowDivider()
             }
         }
-
 
         // 인사 문구 (2칸 차지)
         item(span = { GridItemSpan(maxLineSpan) }) {
@@ -103,11 +95,10 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .padding(bottom = 20.dp)
             )
-
             Spacer(Modifier.height(10.dp))
         }
 
-        // 타일 2열 그리드 (스크롤됨)
+        // 타일 2열 그리드
         items(tiles) { action ->
             ActionTile(
                 label = action.label,
@@ -126,9 +117,9 @@ private data class Action(
 
 @Composable
 fun DropShadowDivider(
-    offsetY: Dp = 3.dp,                                    // Figma의 Y 오프셋 느낌
-    blur: Dp = 4.dp,                                       // Figma의 Blur 느낌
-    color: Color = Color.Black.copy(alpha = 0.25f)         // #000 25%
+    offsetY: Dp = 3.dp,
+    blur: Dp = 4.dp,
+    color: Color = Color.Black.copy(alpha = 0.25f)
 ) {
     val height = offsetY + blur
     Box(
@@ -148,7 +139,6 @@ fun DropShadowDivider(
             }
     )
 }
-
 
 private val ICON_SLOT_HEIGHT = 120.dp
 
@@ -185,18 +175,18 @@ private fun ActionTile(
             ) {
                 Image(
                     painter = painterResource(iconRes),
-                    contentDescription = label,           // 접근성
+                    contentDescription = label,
                     modifier = Modifier.size(65.dp)
                 )
             }
             Spacer(Modifier.height(0.dp))
             Text(
                 text = label,
-                modifier = Modifier.fillMaxWidth(),   // 줄 폭을 타일 폭으로
-                textAlign = TextAlign.Center,         // 각 줄 가운대로
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
-                lineHeight = 40.sp   // 행간
+                lineHeight = 40.sp
             )
         }
     }

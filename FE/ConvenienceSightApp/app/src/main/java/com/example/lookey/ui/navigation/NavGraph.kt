@@ -38,7 +38,6 @@ fun AppNavGraph(
     ) {
         composable(Routes.Home) {
             HomeScreen(
-                tts = tts,
                 userNameState = userNameState,
                 onCart = { navController.navigate(Routes.Cart) }, // 필요한 파라미터에 맞게 호출
                 onFindStore = { navController.navigate(Routes.StoreFinder) },
