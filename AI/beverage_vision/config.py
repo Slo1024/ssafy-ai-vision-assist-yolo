@@ -13,7 +13,7 @@ CLS_EMB = os.getenv("CLS_EMB", str(ROOT / "best_cls_embed_effb0_v2.pt"))
 CLS_PROTOS = os.getenv("CLS_PROTOS", str(ROOT / "prototypes_effb0_v2.pt"))
 CLS_TAU = os.getenv("CLS_TAU", str(ROOT / "tau_effb0_v2.json"))
 
-CONF_THR = float(os.getenv("CONF_THR", "0.35"))
+CONF_THR = float(os.getenv("CONF_THR", "0.60"))
 IOU_THR  = float(os.getenv("IOU_THR",  "0.50"))
 MIN_BOX  = int(os.getenv("MIN_BOX", "10"))
 MIN_FINAL= float(os.getenv("MIN_FINAL", "0.25"))
