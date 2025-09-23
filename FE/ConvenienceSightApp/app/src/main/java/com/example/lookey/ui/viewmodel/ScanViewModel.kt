@@ -213,12 +213,23 @@ class ScanViewModel(
 
             res?.let {
                 val matched = it.result.matchedNames.orEmpty()
+                val count = it.result.count ?: 0
                 val next = matched.firstOrNull()
+
+                // 디버깅용 로그 추가
+                println("PRODUCT-005 Response: count=$count, matched=${matched.size}, names=$matched")
+
+                val bannerText = when {
+                    count == 0 -> "상품을 찾을 수 없습니다. 카메라를 상품에 가까이 대주세요."
+                    matched.isEmpty() -> "인식된 상품이 장바구니에 없습니다."
+                    else -> "상품 ${matched.size}개를 찾았습니다."
+                }
+
                 _ui.update { s ->
                     s.copy(
                         banner = ResultFormatter.Banner(
-                            type = ResultFormatter.Banner.Type.SUCCESS,
-                            text = "상품 인식이 종료되었습니다."
+                            type = if (count > 0) ResultFormatter.Banner.Type.SUCCESS else ResultFormatter.Banner.Type.INFO,
+                            text = bannerText
                         ),
                         cartGuideQueue = matched,
                         cartGuideTargetName = next,
@@ -237,6 +248,8 @@ class ScanViewModel(
     // ----------------------------------------
     fun onCartGuideConfirm() {
         val target = _ui.value.cartGuideTargetName ?: return
+        println("=== onCartGuideConfirm called for product: $target ===")
+        speak("$target 을(를) 찾기 시작합니다. 카메라를 천천히 움직여 주세요.")
         _ui.update { it.copy(showCartGuideModal = false, guiding = true, guideDirection = null) }
         start006Loop(target)
     }
@@ -247,33 +260,123 @@ class ScanViewModel(
 
     private fun start006Loop(targetName: String) {
         viewModelScope.launch {
-            if (frameProvider == null) return@launch start006StubOnce(targetName)
+            println("=== start006Loop called ===")
+            println("frameProvider is null? ${frameProvider == null}")
 
-            repeat(4) {
+            if (frameProvider == null) {
+                println("frameProvider is NULL - using stub")
+                return@launch start006StubOnce(targetName)
+            }
+
+            println("=== Starting 006 Loop for product: $targetName ===")
+
+            // 첫 안내 후 1초 대기
+            delay(1000)
+
+            // 상품을 찾을 때까지 반복 (최대 10회)
+            repeat(10) { attempt ->
+                println("Attempt ${attempt + 1} of 10")
+
                 // 🔒 TTS 쿨다운 동안은 호출 지연
                 val now = SystemClock.elapsedRealtime()
                 if (now < ttsCooldownUntilMs) {
                     delay(ttsCooldownUntilMs - now + 50)
                 }
 
-                val frame = frameProvider.invoke() ?: return@repeat
-                val res = runCatching {
-                    repoNet.productLocation(cacheDir, frame, targetName)
-                }.getOrNull()
+                val frame = frameProvider.invoke()
+                if (frame == null) {
+                    println("Frame is NULL at attempt ${attempt + 1}")
+                    delay(500)
+                    return@repeat  // 다음 반복으로
+                }
 
-                when (res?.result?.caseType) {
-                    "DIRECTION" -> {
-                        val dir = res.result.target?.directionBucket?.toDirectionBucketOrNull()
-                        _ui.update { it.copy(guideDirection = dir) }
-                        if (dir != null) {
-                            speak("$targetName 이(가) ${dir.label}에 있습니다.")
-                            // 🕒 안내 음성 후 1.2초 동안 추가 호출 금지
-                            ttsCooldownUntilMs = SystemClock.elapsedRealtime() + 1200L
+                println("Got frame, calling API...")
+                val res = try {
+                    val apiResponse = repoNet.productLocation(cacheDir, frame, targetName)
+                    println("API Response received successfully")
+                    println("Raw response: $apiResponse")
+                    apiResponse
+                } catch (e: Exception) {
+                    println("API call failed: ${e.message}")
+                    e.printStackTrace()
+                    null
+                }
+
+                // 상세한 응답 로깅
+                println("=== 006 API Full Response ===")
+                println("Status: ${res?.status}")
+                println("Message: ${res?.message}")
+                println("CaseType: ${res?.result?.caseType}")
+                println("Target: ${res?.result?.target}")
+                println("Target.name: ${res?.result?.target?.name}")
+                println("Target.directionBucket: ${res?.result?.target?.directionBucket}")
+                println("Info: ${res?.result?.info}")
+                println("=========================")
+
+                // caseType은 대소문자 구분 없이 처리
+                val caseType = res?.result?.caseType?.uppercase()
+                println("Processing case type: $caseType")
+
+                // caseType이 null이어도 directionBucket이 있으면 방향 안내
+                val hasDirection = res?.result?.target?.directionBucket != null
+
+                when {
+                    caseType == "DIRECTION" || hasDirection -> {
+                        println(">>> Entering DIRECTION case")
+                        val directionStr = res.result.target?.directionBucket
+                        println("Direction response: $directionStr")
+
+                        // 방향 매핑 - 더 자연스러운 안내 메시지
+                        println("Mapping direction: '$directionStr'")
+                        val directionMessage = when(directionStr) {
+                            "왼쪽위" -> "왼쪽 위"
+                            "위" -> "위쪽"
+                            "오른쪽위" -> "오른쪽 위"
+                            "왼쪽" -> "왼쪽"
+                            "가운데", "중간" -> {
+                                // 가운데인 경우 특별 처리 - 가까이 가라고 안내
+                                println("CENTER detected - speaking special message")
+                                speak("상품이 정면에 있습니다. 가까이 가주세요")
+                                ttsCooldownUntilMs = SystemClock.elapsedRealtime() + 2000L
+                                delay(1500)
+                                null // 추가 메시지 없음
+                            }
+                            "오른쪽" -> "오른쪽"
+                            "왼쪽아래" -> "왼쪽 아래"
+                            "아래" -> "아래쪽"
+                            "오른쪽아래" -> "오른쪽 아래"
+                            else -> {
+                                println("Unknown direction: '$directionStr', using as is")
+                                directionStr
+                            }
                         }
-                        delay(200) // 살짝 텀
+                        println("Direction message will be: '$directionMessage'")
+
+                        val dir = directionStr?.toDirectionBucketOrNull()
+                        _ui.update { it.copy(guideDirection = dir) }
+
+                        if (!directionMessage.isNullOrEmpty()) {
+                            val message = "${directionMessage}로 이동하세요"
+                            println("!!! SPEAKING DIRECTION: '$message'")
+                            val speakResult = speak(message)
+                            println("TTS speak() returned: $speakResult")
+                            // 🕒 안내 음성 후 2초 동안 추가 호출 금지 (TTS + 이동 시간)
+                            ttsCooldownUntilMs = SystemClock.elapsedRealtime() + 2000L
+                        } else {
+                            println("WARNING: directionMessage is null or empty!")
+                        }
+
+                        // 다음 촬영까지 대기
+                        delay(1500)
                     }
-                    "SINGLE_RECOGNIZED" -> {
+                    caseType == "SINGLE_RECOGNIZED" || caseType == "RECOGNIZED" || caseType == "FOUND" -> {
                         val info = res.result.info
+                        println("Product found! Info: $info")
+
+                        // 상품 찾았음을 알림
+                        speak("${info?.name ?: targetName}을(를) 찾았습니다!")
+                        delay(500)
+
                         val det = DetectResult(
                             id = info?.name ?: targetName,
                             name = info?.name ?: targetName,
@@ -283,19 +386,78 @@ class ScanViewModel(
                             allergyNote = if (info?.allergy == true) "알레르기 주의" else null,
                             confidence = 0.95f
                         )
+
+                        // 상품 정보 음성 안내
+                        val priceText = info?.price?.let { "${it}원" } ?: ""
+                        val eventText = info?.event?.let { "$it 행사중" } ?: ""
+                        val allergyText = if (info?.allergy == true) "알레르기 주의 상품입니다" else ""
+
+                        val fullMessage = listOfNotNull(
+                            priceText,
+                            eventText,
+                            allergyText
+                        ).joinToString(". ")
+
+                        if (fullMessage.isNotEmpty()) {
+                            speak(fullMessage)
+                        }
+
                         val banner = ResultFormatter.toBanner(det)
                         _ui.update { it.copy(banner = banner, guiding = false, guideDirection = null) }
-                        cart?.remove(CartLine(name = det.name))   // CartLine 생성자 필드명은 프로젝트 정의에 맞춰 주세요
+                        cart?.remove(CartLine(name = det.name))
                         proceedToNextCartTarget()
-                        speak(ResultFormatter.toVoice(det).text)
+
+                        println("=== Product recognition completed ===")
                         return@launch
                     }
                     else -> {
                         // 서버에서 아직 못 찾음 → 잠시 후 재시도
-                        delay(600)
+                        println("WARNING: Unknown case type: '$caseType'")
+                        println("Original caseType (before uppercase): '${res?.result?.caseType}'")
+                        println("Full result: ${res?.result}")
+
+                        // 혹시 info에 데이터가 있으면 찾은 것으로 처리
+                        if (res?.result?.info != null && res.result.info.name != null) {
+                            println("Found info in unknown case type, treating as RECOGNIZED")
+                            // SINGLE_RECOGNIZED 로직 실행
+                            val info = res.result.info
+                            speak("${info.name}을(를) 찾았습니다!")
+                            delay(500)
+
+                            val det = DetectResult(
+                                id = info.name ?: targetName,
+                                name = info.name ?: targetName,
+                                price = info.price,
+                                promo = info.event,
+                                hasAllergy = info.allergy == true,
+                                allergyNote = if (info.allergy == true) "알레르기 주의" else null,
+                                confidence = 0.95f
+                            )
+
+                            val priceText = info.price?.let { "${it}원" } ?: ""
+                            val eventText = info.event?.let { "$it 행사중" } ?: ""
+                            val allergyText = if (info.allergy == true) "알레르기 주의 상품입니다" else ""
+
+                            val fullMessage = listOfNotNull(priceText, eventText, allergyText).joinToString(". ")
+                            if (fullMessage.isNotEmpty()) speak(fullMessage)
+
+                            val banner = ResultFormatter.toBanner(det)
+                            _ui.update { it.copy(banner = banner, guiding = false, guideDirection = null) }
+                            cart?.remove(CartLine(name = det.name))
+                            proceedToNextCartTarget()
+                            return@launch
+                        }
+
+                        if (attempt == 9) { // 마지막 시도
+                            speak("$targetName 을(를) 찾을 수 없습니다. 다시 시도해주세요.")
+                        } else if (attempt % 3 == 2) { // 3번마다 안내
+                            speak("계속 찾고 있습니다.")
+                        }
+                        delay(1000)
                     }
                 }
             }
+            println("=== 006 Loop ended ===")
             _ui.update { it.copy(guiding = false, guideDirection = null) }
         }
     }

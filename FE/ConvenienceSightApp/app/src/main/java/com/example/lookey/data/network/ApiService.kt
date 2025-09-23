@@ -29,10 +29,17 @@ interface ApiService {
     @POST("api/auth/refresh")
     fun refreshToken(@Body request: RefreshRequest): Response<LoginResponse>
 
-    // 005: 그대로 multipart
+    // 005: 그대로 multipart (field name 수정: shelf_images -> file)
     @Multipart
     @POST("api/v1/product/search")
     suspend fun searchShelf(
+        @Part shelfImage: MultipartBody.Part
+    ): Response<ApiResponse<ShelfSearchResult>>
+
+    // 005-TEST: 인증 없이 테스트
+    @Multipart
+    @POST("api/v1/product/search")
+    suspend fun searchShelfNoAuth(
         @Part shelfImage: MultipartBody.Part
     ): Response<ApiResponse<ShelfSearchResult>>
 
@@ -48,7 +55,7 @@ interface ApiService {
     @POST("api/v1/product/search/location")
     suspend fun searchProductLocation(
         @Part currentFrame: MultipartBody.Part,
-        @Query("product_name") productName: String
+        @Part("product_name") productName: RequestBody  // Query가 아니라 Part로 전달
     ): Response<ApiResponse<LocationSearchResult>>
 
     // AI-001: JSON 버전 추가 (스웨거 기준)

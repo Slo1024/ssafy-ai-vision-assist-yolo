@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
+    <!-- HTTP 허용 도메인 추가 -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">j13e101.p.ssafy.io</domain>
+    </domain-config>
+
+    <!-- 기존 로컬 테스트용 설정 -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">10.0.2.2</domain>
         <trust-anchors>
             <certificates src="@raw/selfsigned" /> <!-- res/raw/selfsigned.cer -->
         </trust-anchors>
     </domain-config>
+
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system"/>
