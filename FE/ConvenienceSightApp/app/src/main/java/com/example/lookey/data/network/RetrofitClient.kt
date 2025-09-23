@@ -1,4 +1,4 @@
-// RetrofitClient.kt (단일 파일 버전)
+// app/src/main/java/com/example/lookey/data/network/RetrofitClient.kt
 package com.example.lookey.data.network
 
 import com.example.lookey.BuildConfig

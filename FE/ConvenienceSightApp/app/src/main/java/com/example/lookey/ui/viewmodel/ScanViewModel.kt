@@ -3,6 +3,7 @@ package com.example.lookey.ui.viewmodel
 
 import android.graphics.Bitmap
 import android.os.SystemClock
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.lookey.domain.entity.DetectResult
@@ -92,7 +93,10 @@ class ScanViewModel(
             while (isActive && _ui.value.mode == Mode.GUIDE) {
                 val frame = frameProvider?.invoke()
                 if (frame != null) {
-                    val resp = runCatching { repoNet.navGuide(cacheDir, frame) }.getOrNull()
+                    val resp = runCatching { repoNet.navGuide(cacheDir, frame) }
+                        .onFailure { e -> Log.e("ScanViewModel", "navGuide 호출 실패", e) }
+                        .getOrNull()
+
                     val ui = resp?.toNavUi()
 
                     _ui.update {
@@ -166,7 +170,11 @@ class ScanViewModel(
             d.directions.left  -> "왼쪽으로 이동 가능합니다"
             else               -> "이동 가능한 방향이 없습니다"
         }
-        val tts = listOfNotNull(caution, goTts).joinToString(". ")
+        val categoryTts = if (!d.category.isNullOrBlank() && d.category != "unknown") {
+            "현재 구역은 ${d.category}입니다"
+        } else null
+
+        val tts = listOfNotNull(caution, goTts, categoryTts).joinToString(". ")
 
         val summary = listOfNotNull(goSummary, if (d.counter) "계산대 감지" else null).joinToString(" | ")
         return NavUi(summary = summary, actions = actions, ttsHint = tts)
