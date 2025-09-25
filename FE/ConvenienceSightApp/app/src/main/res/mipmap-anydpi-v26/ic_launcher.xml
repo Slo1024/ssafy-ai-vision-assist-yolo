@@ -1,0 +1,6 @@
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background"/>
+<!--    메뉴 목록 앱 아이콘 배경 색 수정-->
+    <foreground android:drawable="@drawable/lookey"/>
+    <monochrome android:drawable="@drawable/lookey"/>
+</adaptive-icon>

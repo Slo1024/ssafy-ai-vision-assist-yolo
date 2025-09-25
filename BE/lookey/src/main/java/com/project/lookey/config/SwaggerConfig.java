@@ -1,20 +1,28 @@
 package com.project.lookey.config;
 
+import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
+import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.servers.Server;
-import io.swagger.v3.oas.models.tags.Tag;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springdoc.core.models.GroupedOpenApi;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 
 import java.util.List;
 
 @Configuration
+@SecurityScheme(
+        name = "bearerAuth",
+        type = SecuritySchemeType.HTTP,
+        scheme = "bearer",
+        bearerFormat = "JWT"
+)
 public class SwaggerConfig {
 
     @Value("${spring.profiles.active:dev}")
@@ -33,13 +41,8 @@ public class SwaggerConfig {
                         )
                 )
                 .servers(getServers())
-                .tags(List.of(
-                        new Tag().name("Common").description("공통 API (Health Check, Echo 등)"),
-                        new Tag().name("Auth").description("인증 관련 API (로그인, 회원가입, JWT 등)"),
-                        new Tag().name("Allergy").description("알레르기 정보 관련 API"),
-                        new Tag().name("Cart").description("장바구니 관련 API")
-                ))
-                .components(new Components());
+                .components(new Components())
+                .addSecurityItem(new SecurityRequirement().addList("bearerAuth"));
     }
 
     @Bean
@@ -59,9 +62,9 @@ public class SwaggerConfig {
             );
         } else {
             return List.of(
-                    new Server().url("https://j13e101.p.ssafy.io/dev").description("Development Server"),
+                    new Server().url("http://j13e101.p.ssafy.io:8082").description("Development Server"),
                     new Server().url("http://localhost:8080").description("Local Development"),
-                    new Server().url("https://j13e101.p.ssafy.io").description("Production Server")
+                    new Server().url("http://j13e101.p.ssafy.io:8081").description("Production Server")
             );
         }
     }

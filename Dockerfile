@@ -2,7 +2,7 @@ FROM openjdk:17-jdk-slim
 
 WORKDIR /app
 
-# Copy the JAR file from backend/build/libs
+# Copy the JAR file from backend/build/libs (Jenkins copies BE/lookey to backend)
 COPY backend/build/libs/lookey-*.jar app.jar
 
 # Create .env file if it doesn't exist

@@ -1,22 +1,22 @@
 networks:
-  dev-network:
-    driver: bridge
+  shared-network:
+    external: true  # Use existing shared network for AI service communication
 
 services:
   mysql-shared:
     image: mysql:8.0
     container_name: mysql-shared
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: lookey
-      MYSQL_USER: lookey
-      MYSQL_PASSWORD: lookeypass
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "3306:3306"
     volumes:
       - mysql-shared-data:/var/lib/mysql
     networks:
-      - dev-network
+      - shared-network
     restart: unless-stopped
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
 
@@ -28,7 +28,7 @@ services:
     volumes:
       - redis-shared-data:/data
     networks:
-      - dev-network
+      - shared-network
     restart: unless-stopped
 
   springapp-dev:
@@ -36,18 +36,34 @@ services:
     container_name: springapp-dev
     ports:
       - "8082:8080"
+    env_file:
+      - .env
     environment:
       - SPRING_PROFILES_ACTIVE=dev
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-shared:3306/lookey
-      - SPRING_DATASOURCE_USERNAME=lookey
-      - SPRING_DATASOURCE_PASSWORD=lookeypass
-      - SPRING_DATA_REDIS_HOST=redis-shared
-      - SPRING_DATA_REDIS_PORT=6379
+      - SERVER_PORT=8080
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      - SPRING_DATA_REDIS_HOST=${SPRING_DATA_REDIS_HOST}
+      - SPRING_DATA_REDIS_PORT=${SPRING_DATA_REDIS_PORT}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO_DEV}
+      - SPRING_JPA_SHOW_SQL=${SPRING_JPA_SHOW_SQL_DEV}
+      - LOGGING_LEVEL_COM_PROJECT_LOOKEY=${LOGGING_LEVEL_COM_PROJECT_LOOKEY_DEV}
+      - LOGGING_LEVEL_ROOT=${LOGGING_LEVEL_ROOT_DEV}
+      - GOOGLE_OAUTH_ID=${GOOGLE_OAUTH_ID}
+      - GOOGLE_OAUTH_SECRET=${GOOGLE_OAUTH_SECRET}
+      - JWT_SECRET=${JWT_SECRET}
+      - GOOGLE_REDIRECT_URI=http://j13e101.p.ssafy.io:8082/login/oauth2/code/google
+      - GOOGLE_CALLBACK_URL=http://j13e101.p.ssafy.io:8082/auth/google/callback
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
+      - GOOGLE_CLOUD_PROJECT_ID=${GOOGLE_CLOUD_PROJECT_ID}
+    volumes:
+      - /opt/project/ssafy-finance-6921c01f57ed.json:/opt/project/ssafy-finance-6921c01f57ed.json:ro
     depends_on:
       - mysql-shared
       - redis-shared
     networks:
-      - dev-network
+      - shared-network
     restart: unless-stopped
 
 volumes:
