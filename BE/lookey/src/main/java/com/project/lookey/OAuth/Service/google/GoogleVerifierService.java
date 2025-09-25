@@ -27,13 +27,11 @@ public class GoogleVerifierService {
             GoogleIdToken idToken = verifier.verify(idTokenString);
 
             if (idToken == null) {
-                System.out.println("유효하지 않은 ID Token입니다.");
                 throw new RuntimeException("유효하지 않은 ID Token입니다.");
             }
 
             return idToken.getPayload();
         } catch (Exception e) {
-            System.out.println("ID Token 검증 중 오류 발생" + e);
             throw new RuntimeException("ID Token 검증 중 오류 발생", e);
         }
     }

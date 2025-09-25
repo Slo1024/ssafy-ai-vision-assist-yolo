@@ -51,7 +51,6 @@ public class VisionApiService { // Updated response format
     @PostConstruct
     public void initializeVisionClient() {
         try {
-            log.info("Google Cloud credentials path: {}", credentialsPath);
 
             // 파일 존재 확인
             java.io.File credFile = new java.io.File(credentialsPath);
@@ -145,18 +144,6 @@ public class VisionApiService { // Updated response format
                 throw new RuntimeException("Vision API Error: " + imageResponse.getError().getMessage());
             }
 
-            // 디버그 로그 추가 - 감지된 객체들 출력
-            log.info("=== Vision API 감지 결과 ===");
-            log.info("감지된 객체 수: {}", imageResponse.getLocalizedObjectAnnotationsList().size());
-            for (LocalizedObjectAnnotation obj : imageResponse.getLocalizedObjectAnnotationsList()) {
-                log.info("객체: {} (신뢰도: {:.3f})", obj.getName(), obj.getScore());
-            }
-
-            log.info("감지된 라벨 수: {}", imageResponse.getLabelAnnotationsList().size());
-            for (EntityAnnotation label : imageResponse.getLabelAnnotationsList()) {
-                log.info("라벨: {} (신뢰도: {:.3f})", label.getDescription(), label.getScore());
-            }
-            log.info("========================");
 
             return new DetectionResult(
                     imageResponse.getLocalizedObjectAnnotationsList(),
@@ -190,7 +177,6 @@ public class VisionApiService { // Updated response format
             BufferedImage centerRegion = originalImage.getSubimage(regionWidth, 0, regionWidth, height);
             BufferedImage rightRegion = originalImage.getSubimage(regionWidth * 2, 0, width - regionWidth * 2, height);
 
-            log.info("이미지 3분할 완료 - 원본: {}x{}, 영역: {}x{}", width, height, regionWidth, height);
 
             // 3개 영역 병렬 분석 (Object + Label Detection)
             CompletableFuture<RegionResult> leftAnalysis = analyzeRegionWithObjectsAsync(leftRegion, "LEFT");
@@ -220,10 +206,6 @@ public class VisionApiService { // Updated response format
             peopleByRegion.put("front", centerPeople);
             peopleByRegion.put("right", rightPeople);
 
-            log.info("=== peopleByRegion 맵 생성 결과 ===");
-            log.info("LEFT: {} → left: {}", leftPeople, peopleByRegion.get("left"));
-            log.info("CENTER: {} → front: {}", centerPeople, peopleByRegion.get("front"));
-            log.info("RIGHT: {} → right: {}", rightPeople, peopleByRegion.get("right"));
 
             // 장애물 위치 분석
             Map<String, Boolean> obstaclesByRegion = new HashMap<>();
@@ -237,15 +219,6 @@ public class VisionApiService { // Updated response format
             // 카운터 감지 (전체 영역 통합 분석)
             boolean counterDetection = detectCounterInRegions(leftResult, centerResult, rightResult);
 
-            log.info("3분할 분석 결과:");
-            log.info("  방향: left={}, front={}, right={}",
-                    directions.get("left"), directions.get("front"), directions.get("right"));
-            log.info("  사람: left={}, front={}, right={}",
-                    peopleByRegion.get("left"), peopleByRegion.get("front"), peopleByRegion.get("right"));
-            log.info("  장애물: left={}, front={}, right={}",
-                    obstaclesByRegion.get("left"), obstaclesByRegion.get("front"), obstaclesByRegion.get("right"));
-            log.info("  카테고리(중앙): {}", centerCategory);
-            log.info("  카운터: {}", counterDetection);
 
             return new ParallelAnalysisResult(directions, peopleByRegion, obstaclesByRegion, centerCategory, counterDetection);
 
@@ -277,7 +250,6 @@ public class VisionApiService { // Updated response format
     private CompletableFuture<RegionResult> analyzeRegionWithObjectsAsync(BufferedImage regionImage, String regionName) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                log.info("{} 영역 분석 시작", regionName);
 
                 // BufferedImage를 byte[]로 변환
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -313,13 +285,6 @@ public class VisionApiService { // Updated response format
                 List<LocalizedObjectAnnotation> objects = imageResponse.getLocalizedObjectAnnotationsList();
                 List<EntityAnnotation> labels = imageResponse.getLabelAnnotationsList();
 
-                log.info("{} 영역 분석 완료 - 객체 {}개, 라벨 {}개", regionName, objects.size(), labels.size());
-                for (LocalizedObjectAnnotation obj : objects) {
-                    log.info("  {} 영역 객체: {} (신뢰도: {:.3f})", regionName, obj.getName(), obj.getScore());
-                }
-                for (EntityAnnotation label : labels) {
-                    log.info("  {} 영역 라벨: {} (신뢰도: {:.3f})", regionName, label.getDescription(), label.getScore());
-                }
 
                 return new RegionResult(objects, labels);
 
@@ -337,9 +302,6 @@ public class VisionApiService { // Updated response format
         boolean hasAisleLabels = labels.stream()
                 .anyMatch(label -> label.getDescription().toLowerCase().contains("aisle"));
 
-        log.info("{} 영역: {} - {}", regionName,
-                hasAisleLabels ? "통로 감지" : "통로 없음",
-                hasAisleLabels ? "이동 가능" : "이동 불가");
 
         return hasAisleLabels;
     }
@@ -348,19 +310,11 @@ public class VisionApiService { // Updated response format
      * 영역별 사람 감지
      */
     private boolean detectPeopleInRegion(RegionResult regionResult, String regionName) {
-        System.out.println("=== detectPeopleInRegion 메서드 호출됨: " + regionName + " ===");
-        log.info("=== detectPeopleInRegion 메서드 호출됨: {} ===", regionName);
 
         // Object Detection 우선
         boolean objectDetection = regionResult.getObjects().stream()
                 .anyMatch(obj -> obj.getName().toLowerCase().contains("person") && obj.getScore() > 0.5f);
 
-        // Object Detection 로깅 추가
-        if (!regionResult.getObjects().isEmpty()) {
-            log.info("{} 영역 감지된 객체들:", regionName);
-            regionResult.getObjects().forEach(obj ->
-                log.info("  {} 영역 객체: {} (신뢰도: {:.3f})", regionName, obj.getName(), obj.getScore()));
-        }
 
         // Label Detection 보완 - 정확한 단어 매칭으로 수정
         Set<String> peopleLabels = Set.of("person", "people", "human", "man", "woman");
@@ -378,23 +332,12 @@ public class VisionApiService { // Updated response format
 
             boolean highConfidence = label.getScore() > 0.6f;
 
-            // 상세 디버깅 로그 추가
-            if (hasPeopleLabel) {
-                log.info("{} 영역 사람 라벨 매칭: '{}' (신뢰도: {:.3f}) - 매칭됨!",
-                        regionName, desc, label.getScore());
-            }
 
             return hasPeopleLabel && highConfidence;
         });
 
         boolean hasPeople = objectDetection || labelDetection;
 
-        // 상세 디버깅 로그 추가
-        log.info("{} 영역 상세 분석 결과:", regionName);
-        log.info("  objectDetection: {}", objectDetection);
-        log.info("  labelDetection: {}", labelDetection);
-        log.info("  최종 hasPeople: {}", hasPeople);
-        log.info("{} 영역 사람 감지: {}", regionName, hasPeople ? "있음" : "없음");
 
         return hasPeople;
     }
@@ -411,7 +354,6 @@ public class VisionApiService { // Updated response format
                     return obstacleTypes.stream().anyMatch(objectName::contains) && obj.getScore() > 0.5f;
                 });
 
-        log.info("{} 영역 장애물 감지: {}", regionName, hasObstacles ? "있음" : "없음");
 
         return hasObstacles;
     }
@@ -431,17 +373,6 @@ public class VisionApiService { // Updated response format
         allObjects.addAll(centerResult.getObjects());
         allObjects.addAll(rightResult.getObjects());
 
-        // 탐지된 모든 라벨 로그 출력
-        log.info("=== 탐지된 라벨들 (총 {}개) ===", allLabels.size());
-        for (EntityAnnotation label : allLabels) {
-            log.info("라벨: '{}' (신뢰도: {:.3f})", label.getDescription(), label.getScore());
-        }
-
-        // 탐지된 모든 객체 로그 출력
-        log.info("=== 탐지된 객체들 (총 {}개) ===", allObjects.size());
-        for (LocalizedObjectAnnotation obj : allObjects) {
-            log.info("객체: '{}' (신뢰도: {:.3f})", obj.getName(), obj.getScore());
-        }
 
         // 라벨 세트 생성 (소문자, 빠른 검색용)
         Set<String> labelSet = allLabels.stream()
@@ -449,8 +380,6 @@ public class VisionApiService { // Updated response format
                 .map(label -> label.getDescription().toLowerCase())
                 .collect(Collectors.toSet());
 
-        log.info("=== 분석 대상 라벨들 (신뢰도 0.6+) ===");
-        labelSet.forEach(label -> log.info("  분석 라벨: '{}'", label));
 
         // 1단계: 직접 카운터 키워드 (100% 확실)
         Set<String> directCounterKeywords = Set.of(
@@ -462,7 +391,6 @@ public class VisionApiService { // Updated response format
                 .anyMatch(labelSet::contains);
 
         if (hasDirectCounterKeyword) {
-            log.info("=== 카운터 탐지 성공 (1단계: 직접 키워드) ===");
             return true;
         }
 
@@ -470,33 +398,22 @@ public class VisionApiService { // Updated response format
         boolean hasElectronicDevice = labelSet.contains("electronic device");
         boolean hasMachine = labelSet.contains("machine");
 
-        log.info("=== 2단계 핵심 증거 분석 ===");
-        log.info("  Electronic device: {}", hasElectronicDevice);
-        log.info("  Machine: {}", hasMachine);
 
         if (hasElectronicDevice && hasMachine) {
             // 3단계: 자판기 환경 제외 로직
             boolean isVendingMachine = isVendingMachineEnvironment(labelSet);
-            log.info("  자판기 환경 여부: {}", isVendingMachine);
 
             if (!isVendingMachine) {
                 // 4단계: 환경 컨텍스트 확인
                 boolean isConvenienceStore = isConvenienceStoreEnvironment(labelSet);
                 boolean isArchitecturalSpace = isArchitecturalEnvironment(labelSet);
 
-                log.info("  편의점 환경: {}", isConvenienceStore);
-                log.info("  건물 내부 환경: {}", isArchitecturalSpace);
-
                 if (isConvenienceStore || isArchitecturalSpace) {
-                    log.info("=== 카운터 탐지 성공 (2단계: Electronic+Machine+환경) ===");
                     return true;
                 }
             }
         }
 
-        log.info("=== 카운터 탐지 실패 ===");
-        log.info("  Electronic device + Machine 조합: {}", hasElectronicDevice && hasMachine);
-        log.info("  직접 키워드: {}", hasDirectCounterKeyword);
         return false;
     }
 
@@ -515,8 +432,6 @@ public class VisionApiService { // Updated response format
 
         // Machine + 음료 관련 라벨 3개 이상 = 자판기
         boolean isVending = labelSet.contains("machine") && beverageCount >= 3;
-        log.info("    자판기 판단: Machine({}) + 음료라벨{}개 = {}",
-                labelSet.contains("machine"), beverageCount, isVending);
         return isVending;
     }
 

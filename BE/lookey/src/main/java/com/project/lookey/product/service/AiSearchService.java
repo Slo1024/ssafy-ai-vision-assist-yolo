@@ -97,14 +97,6 @@ public class AiSearchService {
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "AI 서버에서 올바른 응답을 받지 못했습니다.");
             }
 
-            // AI 응답의 모든 상품 상세 로깅
-            log.info("🤖 AI 서버 전체 응답 상세:");
-            log.info("  - 전체 감지된 상품 개수: {}", response.items().size());
-            for (int i = 0; i < response.items().size(); i++) {
-                ShelfItem item = response.items().get(i);
-                log.info("  - 상품 #{}: 이름='{}', x={}, y={}, w={}, h={}",
-                    i+1, item.name(), item.x(), item.y(), item.w(), item.h());
-            }
 
             return response;
 
@@ -280,8 +272,6 @@ public class AiSearchService {
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "AI 서버에서 응답을 받지 못했습니다.");
             }
 
-            log.info("AI 서버 전체 응답 - multiple: {}, items: {}, items 개수: {}",
-                    response.multiple(), response.items(), response.items() != null ? response.items().size() : 0);
 
             return response;
 
@@ -361,9 +351,6 @@ public class AiSearchService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "저장된 매대 정보가 없습니다. 먼저 매대를 스캔해주세요.");
         }
 
-        // AI 응답 로그 추가
-        log.info("AI 응답 분석 - multiple: {}, items: {}, 찾는 상품: {}",
-                currentFrame.multiple(), currentFrame.items(), productName);
 
         // 매대에서 타겟 상품 찾기
         ShelfItem targetProduct = shelfData.items().stream()
@@ -373,7 +360,6 @@ public class AiSearchService {
 
         // 현재 화면에 상품이 여러 개 감지된 경우 (multiple: true)
         if (currentFrame.multiple()) {
-            log.info("🔄 MULTIPLE=TRUE 경로 진입 - 다중 상품 감지 모드 - 감지된 상품들: {}", currentFrame.items());
 
             // 현재 화면의 상품들을 매대 데이터와 매칭
             Optional<ShelfItem> currentProductOpt = shelfData.items().stream()
@@ -383,11 +369,8 @@ public class AiSearchService {
 
             if (currentProductOpt.isPresent()) {
                 ShelfItem currentProduct = currentProductOpt.get();
-                log.info("매대에서 현재 위치 상품 찾음 - 현재: '{}', 목표: '{}'",
-                        currentProduct.name(), productName);
 
                 String direction = calculateDirectionWithBoundaries(targetProduct, currentProduct);
-                log.info("다중 상품 감지 - 방향 안내 반환: {}", direction);
 
                 ProductDirectionResponse.Target target = new ProductDirectionResponse.Target(productName, direction);
                 return new ProductDirectionResponse.Result("DIRECTION", target, null);
@@ -397,20 +380,15 @@ public class AiSearchService {
             }
         } else {
             // 현재 화면에 상품이 1개만 감지된 경우 (multiple: false)
-            log.info("⭕ MULTIPLE=FALSE 경로 진입 - 단일 상품 모드");
             if (currentFrame.items().size() == 1) {
                 String detectedProduct = currentFrame.items().get(0);
-                log.info("단일 상품 감지 - AI 감지: '{}', FE 요청: '{}'", detectedProduct, productName);
 
                 // AI가 감지한 상품명과 FE에서 요청한 상품명이 같은지 확인
                 if (isProductNameMatch(detectedProduct, productName)) {
                     // 상품명이 같은 경우: SINGLE_RECOGNIZED + DB에서 상품 정보 조회
-                    log.info("상품명 매칭 성공 - DB에서 상품 정보 조회 시작: {}", productName);
                     Optional<Product> productOpt = findProductByName(productName);
                     if (productOpt.isPresent()) {
                         Product product = productOpt.get();
-                        log.info("상품 DB 조회 성공 - 이름: {}, 가격: {}, 이벤트: {}",
-                                product.getName(), product.getPrice(), product.getEvent());
 
                         // 사용자 알레르기 체크
                         boolean hasAllergy = checkUserAllergy(product, userId);
@@ -423,7 +401,6 @@ public class AiSearchService {
                         );
                         return new ProductDirectionResponse.Result("SINGLE_RECOGNIZED", null, info);
                     } else {
-                        log.warn("상품 DB 조회 실패 - 상품명: {}", productName);
                         // DB에서 찾지 못한 경우도 SINGLE_RECOGNIZED로 반환 (알레르기 정보 없음)
                         ProductDirectionResponse.Info info = new ProductDirectionResponse.Info(
                                 productName,
@@ -435,7 +412,6 @@ public class AiSearchService {
                     }
                 } else {
                     // 상품명이 다른 경우: DIRECTION + 매대 데이터 기반 방향 안내
-                    log.info("상품명 다름 - 방향 안내 모드로 전환");
 
                     // 매대 데이터에서 AI가 감지한 상품 찾기
                     Optional<ShelfItem> currentProductOpt = shelfData.items().stream()
@@ -445,8 +421,6 @@ public class AiSearchService {
                     if (currentProductOpt.isPresent()) {
                         ShelfItem currentProduct = currentProductOpt.get();
                         String direction = calculateDirectionWithBoundaries(targetProduct, currentProduct);
-                        log.info("방향 계산 완료 - 현재: '{}', 목표: '{}', 방향: '{}'",
-                                detectedProduct, productName, direction);
 
                         ProductDirectionResponse.Target target = new ProductDirectionResponse.Target(productName, direction);
                         return new ProductDirectionResponse.Result("DIRECTION", target, null);
@@ -456,7 +430,6 @@ public class AiSearchService {
                     }
                 }
             } else {
-                log.error("현재 화면에서 상품 감지 실패 - 감지된 상품 개수: {}", currentFrame.items().size());
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "현재 화면에서 상품을 감지할 수 없습니다.");
             }
         }

@@ -71,14 +71,11 @@ public class ProductAllergyService {
         List<Product> products = productRepository.findAll();
         List<AllergyList> allergies = allergyListRepository.findAll();
 
-        System.out.println("===== API 응답 처리 시작 =====");
 
         for (ApiResponse.Body.ItemWrapper wrapper : apiResponse.getBody().getItems()) {
             ApiItem apiItem = wrapper.getItem();
             if (apiItem == null) continue;
 
-            System.out.printf("API 상품명=%s, API 알러지=%s%n",
-                    apiItem.getPrdlstNm(), apiItem.getAllergy());
 
             String productNameFromApi = normalize(apiItem.getPrdlstNm());
             String allergyStr = apiItem.getAllergy();
@@ -111,8 +108,6 @@ public class ProductAllergyService {
                                     pa.setAllergy(allergy);
                                     productAllergyRepository.save(pa);
 
-                                    System.out.printf("[추가됨] 상품=%s, 알러지=%s%n",
-                                            product.getName(), allergy.getName());
                                 }
                             }
                         }
