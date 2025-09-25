@@ -153,7 +153,7 @@ class Repository {
     suspend fun navGuide(cacheDir: File, bitmap: Bitmap): VisionAnalyzeResponse? {
         // Bitmap → File
         val file = File(cacheDir, "nav_image.jpg").apply {
-            outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 50, it) }
+            outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 75, it) }
         }
 
         // 📌 파일 크기 확인 (추가 부분)
