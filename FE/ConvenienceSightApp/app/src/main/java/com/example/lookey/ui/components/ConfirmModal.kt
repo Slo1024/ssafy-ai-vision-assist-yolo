@@ -3,6 +3,7 @@ package com.example.lookey.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +31,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.liveRegion
+import com.example.lookey.ui.theme.AppColors
 
 
 @Composable
@@ -41,19 +43,17 @@ fun ConfirmModal(
     onNo: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val bg = MaterialTheme.colorScheme.secondary
-    val fg = MaterialTheme.colorScheme.onSecondary
+    // 라이트=흰색, 다크=진회색(텍스트는 반대로) 자동 적용
+    val bg = AppColors.bannerModalBackground()
+    val fg = AppColors.bannerModalContent()
 
-    // ⬇️ TalkBack 공지 + 포커스 이동
+    // TalkBack 공지 + 포커스 이동
     val view = LocalView.current
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(text) {
-        // 모달이 뜨면 즉시 읽어줌
         view.announceForAccessibility(text)
-        // 모달 컨테이너에 포커스 이동
         focusRequester.requestFocus()
     }
-
 
     Surface(
         color = bg,

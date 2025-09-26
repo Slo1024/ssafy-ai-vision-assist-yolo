@@ -1,6 +1,7 @@
 package com.example.lookey.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -26,39 +27,41 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.liveRegion
+import com.example.lookey.ui.theme.AppColors
+
 
 @Composable
 fun BannerMessage(
     banner: ResultFormatter.Banner,
     modifier: Modifier = Modifier
 ) {
-    val cs = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(16.dp)
-
-
     val view = LocalView.current
+
     LaunchedEffect(banner.text) {
-        // 배너 문구가 바뀔 때 정중하게 공지
+        // 배너 문구 바뀔 때 정중히 공지
         view.announceForAccessibility(banner.text)
     }
 
-
+    // 라이트=흰색, 다크=진회색(텍스트는 반대로) 자동 적용
+    val bg = AppColors.bannerModalBackground()
+    val fg = AppColors.bannerModalContent()
 
     Surface(
-        color = cs.secondary,            // ← 노랑(Back)
-        contentColor = cs.onSecondary,   // ← 검정
-        shape = shape,
+        color = bg,
+        contentColor = fg,
+        shape = RoundedCornerShape(16.dp),
         tonalElevation = 0.dp,
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 20.dp)
             .wrapContentHeight()
             .semantics {
-                // TalkBack: 이 영역을 '알림'처럼 취급
                 paneTitle = "알림"
                 liveRegion = LiveRegionMode.Polite
                 contentDescription = banner.text
             }
+        // , border = BorderStroke(1.dp, if (isDark) AppColors.DarkLine else AppColors.BorderBlack.copy(alpha = 0.12f))
     ) {
         Row(
             modifier = Modifier.padding(vertical = 10.dp),
@@ -66,12 +69,9 @@ fun BannerMessage(
         ) {
             Text(
                 text = banner.text,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Normal   // ← 굵기만 살짝 낮춤
-                ),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Normal),
                 modifier = Modifier.fillMaxWidth()
             )
-
         }
     }
 }
