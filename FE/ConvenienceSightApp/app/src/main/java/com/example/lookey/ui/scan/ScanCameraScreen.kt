@@ -124,10 +124,7 @@ fun ScanCameraScreen(
     val CAM_WIDTH = 320.dp
     val CAM_HEIGHT = 630.dp
     val CAM_TOP = 16.dp
-    val MIC_SIZE = 72
-    val MIC_RISE = 32.dp
-    val PILL_BOTTOM_INSET = 75.dp
-    val micCenterOffsetY = CAM_TOP + CAM_HEIGHT - (MIC_SIZE / 2).dp - MIC_RISE
+
 
     // 줌 capability
     var minZoom by remember { mutableStateOf(1.0f) }
@@ -180,7 +177,7 @@ fun ScanCameraScreen(
                         yesText = "예",
                         noText = "아니요",
                         onYes = scanVm::onCartGuideConfirm,
-                        onNo  = scanVm::onCartGuideSkip,
+                        onNo = scanVm::onCartGuideSkip,
                         modifier = Modifier
                             .width(CAM_WIDTH)
                             .padding(vertical = 20.dp)
@@ -205,35 +202,33 @@ fun ScanCameraScreen(
 //                }
 //            }
 
-            // FeaturePill — 스캔 중엔 “상품 탐색 중”
-            if (ui.mode == Mode.SCAN) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .padding(bottom = PILL_BOTTOM_INSET),
-                    contentAlignment = Alignment.Center
-                ) {
-                    val pillText =
-                        if (ui.scanning || ui.capturing) "상품 탐색 중" else "상품 탐색 시작"
+            // === FeaturePill: 프리뷰 박스 "안" 하단 중앙 ===
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (ui.mode == Mode.SCAN) {
+                    val pillText = if (ui.scanning || ui.capturing) "상품 탐색 중" else "상품 탐색 시작"
                     FeaturePill(
                         text = pillText,
                         onClick = { if (!ui.scanning && !ui.capturing) scanVm.startPanorama() },
+                        modifier = Modifier.width(CAM_WIDTH * 2 / 3)
+                    )
+                } else { // Mode.GUIDE
+                    val guideText = if (ui.navBusy) "길 안내 중" else "길 탐색"
+                    FeaturePill(
+                        text = guideText,
+                        onClick = { if (!ui.navBusy) scanVm.navGuideOnce() }, // 처리 중엔 중복 클릭 방지
                         modifier = Modifier.width(CAM_WIDTH * 2 / 3)
                     )
                 }
             }
         }
 
-        MicActionButton(
-            onClick = { /* TODO: 음성 인식 */ },
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .offset(y = micCenterOffsetY),
-            sizeDp = MIC_SIZE
-        )
-
-        TwoOptionToggle(
+            TwoOptionToggle(
             leftText = "길 안내",
             rightText = "상품 인식",
             selectedLeft = ui.mode == Mode.GUIDE,
@@ -259,35 +254,35 @@ private fun PointerInputChange.consumePositionCompat() {
         this.consumeAllChanges()
     }
 }
-
-@Composable
-private fun DebugPanel(
-    onShowBanner: () -> Unit,
-    onShowModal: () -> Unit
-) {
-    var offset by remember { mutableStateOf(Offset.Zero) }
-
-    Surface(
-        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.28f),
-        contentColor = MaterialTheme.colorScheme.onSecondary,
-        shape = MaterialTheme.shapes.medium,
-        tonalElevation = 0.dp,
-        modifier = Modifier
-            .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDrag = { change, dragAmount ->
-                        change.consumePositionCompat()
-                        offset += dragAmount
-                    }
-                )
-            }
-    ) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
-            Text("DEBUG", style = MaterialTheme.typography.labelSmall)
-            Spacer(Modifier.height(4.dp))
-            TextButton(onClick = onShowBanner) { Text("배너 샘플") }
-            TextButton(onClick = onShowModal) { Text("모달 샘플") }
-        }
-    }
-}
+//
+//@Composable
+//private fun DebugPanel(
+//    onShowBanner: () -> Unit,
+//    onShowModal: () -> Unit
+//) {
+//    var offset by remember { mutableStateOf(Offset.Zero) }
+//
+//    Surface(
+//        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.28f),
+//        contentColor = MaterialTheme.colorScheme.onSecondary,
+//        shape = MaterialTheme.shapes.medium,
+//        tonalElevation = 0.dp,
+//        modifier = Modifier
+//            .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
+//            .pointerInput(Unit) {
+//                detectDragGestures(
+//                    onDrag = { change, dragAmount ->
+//                        change.consumePositionCompat()
+//                        offset += dragAmount
+//                    }
+//                )
+//            }
+//    ) {
+//        Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+//            Text("DEBUG", style = MaterialTheme.typography.labelSmall)
+//            Spacer(Modifier.height(4.dp))
+//            TextButton(onClick = onShowBanner) { Text("배너 샘플") }
+//            TextButton(onClick = onShowModal) { Text("모달 샘플") }
+//        }
+//    }
+//}

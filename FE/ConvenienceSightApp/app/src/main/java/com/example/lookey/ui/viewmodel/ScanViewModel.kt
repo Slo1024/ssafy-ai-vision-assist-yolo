@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.lookey.domain.entity.DetectResult
 import com.example.lookey.ui.cart.CartPort
 import com.example.lookey.ui.scan.ResultFormatter
+import com.example.lookey.ui.scan.ResultFormatter.normalizeTtsKo
 import com.example.lookey.data.network.Repository
 import com.example.lookey.data.remote.dto.navigation.VisionAnalyzeResponse
 import kotlinx.coroutines.Job
@@ -19,6 +20,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
+import kotlinx.coroutines.channels.Channel
+
 
 class ScanViewModel(
     private val speak: (String) -> Unit = {},
@@ -28,6 +31,79 @@ class ScanViewModel(
     /** 현재 화면 프레임 공급자(PreviewView.bitmap 등). 없으면 006은 스텁 */
     private val frameProvider: (() -> Bitmap?)? = null
 ) : ViewModel() {
+
+    // ===== TTS Queue =====
+    // 채널 아이템: 텍스트 또는 순수 대기
+    private data class TtsItem(val text: String? = null, val pauseMs: Long = 0L)
+
+    private val ttsQueue = Channel<TtsItem>(Channel.UNLIMITED)
+    private var ttsWorker: Job? = null
+
+    init {
+        startTtsWorker()
+    }
+
+    // 워커
+    // ScanViewModel.kt
+
+    private fun startTtsWorker() {
+        ttsWorker?.cancel()
+        ttsWorker = viewModelScope.launch {
+            var lastText: String? = null
+            while (isActive) {
+                val item = ttsQueue.receive()
+
+                if (item.text == null && item.pauseMs > 0L) {
+                    delay(item.pauseMs)
+                    continue
+                }
+
+                var normalized = normalizeTtsKo(item.text.orEmpty()).trim()
+                if (normalized.isBlank() || normalized == lastText) continue
+
+                // 👇 끝절 클리핑 방지: 문장 경계 보정
+                normalized = ensureTerminalPause(normalized)
+
+                speak(normalized)   // speakKo 대신: 이미 normalize 됨
+                lastText = normalized
+
+                val ms = estimateTtsDurationMs(normalized)
+                ttsCooldownUntilMs = SystemClock.elapsedRealtime() + ms + 250L
+                delay(ms)
+            }
+        }
+    }
+
+    private fun estimateTtsDurationMs(text: String): Long {
+        val perChar = 110L   // ↑ 넉넉하게
+        val base = 700L
+        val ms = base + text.length * perChar
+        return ms.coerceIn(1200L, 8000L)  // 최소 1.2초 보장
+    }
+
+
+    // 문장 끝 강제 휴지 유틸
+    private fun ensureTerminalPause(s: String): String {
+        // 이미 문장부호(.,!?,… )로 끝나면 제로폭 공간만 추가
+        val zeroWidth = "\u200B"  // 발음되지 않음
+        return if (s.endsWith(".") || s.endsWith("!") || s.endsWith("?") || s.endsWith("…"))
+            s + zeroWidth
+        else
+            s + "." + zeroWidth
+    }
+
+
+    /** 외부에서 호출하는 유일한 말하기 진입점 */
+    private fun sayKo(text: String) {
+        viewModelScope.launch { ttsQueue.send(TtsItem(text = text)) }
+    }
+    private fun sayPause(ms: Long) {
+        viewModelScope.launch { ttsQueue.send(TtsItem(text = null, pauseMs = ms)) }
+    }
+
+
+
+
 
     enum class Mode { SCAN, GUIDE }
 
@@ -59,7 +135,9 @@ class ScanViewModel(
 
         // NAV-001 (길 안내)
         val navSummary: String? = null,
-        val navActions: List<String> = emptyList()
+        val navActions: List<String> = emptyList(),
+
+        val navBusy: Boolean = false        // GUIDE 버튼 처리 중 표시
     )
 
     private val _ui = MutableStateFlow(UiState())
@@ -80,8 +158,46 @@ class ScanViewModel(
                 capturing = false
             )
         }
-        if (mode == Mode.GUIDE) startGuideLoop() else stopGuideLoop()
+        // ❌ 자동 폴링 금지
+        // if (mode == Mode.GUIDE) startGuideLoop() else stopGuideLoop()
+        stopGuideLoop()
     }
+
+    // 버튼을 누를 때마다 한 장만 백엔드로 보내고, 그동안 라벨을 “길 안내 중”으로 바꿉니다.
+    fun navGuideOnce() {
+        viewModelScope.launch {
+            // 시작: busy = true
+            _ui.update { it.copy(navBusy = true) }
+            try {
+                val frame = frameProvider?.invoke()
+                if (frame == null) {
+                    sayKo("카메라 프레임을 가져올 수 없습니다.")
+                    return@launch
+                }
+
+                val resp = runCatching { repoNet.navGuide(cacheDir, frame) }
+                    .onFailure { e -> Log.e("ScanViewModel", "navGuideOnce 실패", e) }
+                    .getOrNull()
+
+                val uiMapped = resp?.toNavUi()
+
+                _ui.update {
+                    it.copy(
+                        navSummary = uiMapped?.summary,
+                        navActions = uiMapped?.actions ?: emptyList()
+                    )
+                }
+
+                uiMapped?.ttsHint?.let { hint ->
+                    if (hint.isNotBlank()) sayKo(hint)
+                }
+            } finally {
+                // 끝: busy = false
+                _ui.update { it.copy(navBusy = false) }
+            }
+        }
+    }
+
 
     // ----------------------------------------
     // NAV-001: 1초 폴링 루프 (새 스펙 data 매핑)
@@ -89,7 +205,7 @@ class ScanViewModel(
     private fun startGuideLoop() {
         if (guideJob?.isActive == true) return
         guideJob = viewModelScope.launch {
-            speak("길 안내를 시작합니다. 카메라를 천천히 움직여 주세요.")
+            sayKo("길 안내를 시작합니다. 카메라를 천천히 움직여 주세요.")
             while (isActive && _ui.value.mode == Mode.GUIDE) {
                 val frame = frameProvider?.invoke()
                 if (frame != null) {
@@ -108,9 +224,10 @@ class ScanViewModel(
 
                     val hint = ui?.ttsHint
                     if (!hint.isNullOrBlank() && hint != lastNavHint) {
-                        speak(hint)
+                        sayKo(hint)          // 👈 교정 적용
                         lastNavHint = hint
                     }
+
                 }
                 delay(1000)
             }
@@ -123,13 +240,17 @@ class ScanViewModel(
         _ui.update { it.copy(navSummary = null, navActions = emptyList()) }
     }
 
+
     /** NAV 응답 → UI용 요약/액션/음성 힌트 매핑 */
     private data class NavUi(val summary: String?, val actions: List<String>, val ttsHint: String?)
 
     private fun VisionAnalyzeResponse.toNavUi(): NavUi? {
         val d = data ?: return NavUi(null, emptyList(), null)
 
-        // 이동 가능 방향
+        // 이동 가능 여부
+        val hasMove = d.directions.left || d.directions.front || d.directions.right
+
+        // 이동 가능 요약(텍스트 UI 용 — 음성과는 별개)
         val goList = buildList {
             if (d.directions.left) add("왼쪽")
             if (d.directions.front) add("정면")
@@ -150,34 +271,55 @@ class ScanViewModel(
         val peopleMsg = tri("사람 감지", d.people.left, d.people.front, d.people.right)
         val obsMsg    = tri("장애물", d.obstacles.left, d.obstacles.front, d.obstacles.right)
 
+        // 카테고리 한글 매핑
+        val categoryKo: String? = when (d.category?.lowercase()) {
+            null, "", "unknown" -> null        // 안내 X
+            "snack", "snacks" -> "과자"         // ← 요구사항
+            "beverage", "beverages", "drink", "drinks" -> "음료"
+            else -> d.category                  // 이미 한글일 가능성
+        }
+
+        // 액션(화면용)
         val actions = buildList {
             if (d.directions.left) add("왼쪽으로 이동")
             if (d.directions.front) add("앞으로 이동")
             if (d.directions.right) add("오른쪽으로 이동")
             if (d.counter) add("계산대 방향")
-            if (!d.category.isNullOrBlank()) add("현재 구역: ${d.category}")
+            if (categoryKo != null) add("현재 구역: $categoryKo")
             if (peopleMsg != null) add(peopleMsg)
             if (obsMsg != null) add(obsMsg)
         }
 
+        // 주의 음성
         val caution = when {
             d.people.front || d.obstacles.front -> "정면 주의"
             else -> null
         }
-        val goTts = when {
-            d.directions.front -> "앞으로 이동 가능합니다"
-            d.directions.right -> "오른쪽으로 이동 가능합니다"
-            d.directions.left  -> "왼쪽으로 이동 가능합니다"
-            else               -> "이동 가능한 방향이 없습니다"
-        }
-        val categoryTts = if (!d.category.isNullOrBlank() && d.category != "unknown") {
-            "현재 구역은 ${d.category}입니다"
+
+        // 이동 음성(이동 불가면 무음)
+        val goTtsSafe: String? = if (hasMove) {
+            when {
+                d.directions.front -> "앞으로 이동 가능합니다"
+                d.directions.right -> "오른쪽으로 이동 가능합니다"
+                d.directions.left  -> "왼쪽으로 이동 가능합니다"
+                else -> null
+            }
         } else null
 
-        val tts = listOfNotNull(caution, goTts, categoryTts).joinToString(". ")
+        // 카테고리 음성(unknown/null이면 무음)
+        val categoryTts = categoryKo?.let { "현재 구역은 ${it}입니다" }
 
-        val summary = listOfNotNull(goSummary, if (d.counter) "계산대 감지" else null).joinToString(" | ")
-        return NavUi(summary = summary, actions = actions, ttsHint = tts)
+        // 최종 TTS: 비어있으면 null로 처리해서 speakKo 호출 안 되게
+        val tts = listOfNotNull(caution, goTtsSafe, categoryTts)
+            .joinToString(". ")
+            .ifBlank { null }
+
+        val summary = buildList {
+            add(goSummary)
+            if (d.counter) add("계산대 감지")
+        }.joinToString(" | ")
+
+        return NavUi(summary = summary, actions = emptyList(), ttsHint = tts)
     }
 
     // ----------------------------------------
@@ -207,17 +349,13 @@ class ScanViewModel(
 
             val res = runCatching { repoNet.productShelfSearch(cacheDir, frame) }.getOrNull()
 
-            // UI 연출: 광각 → 일반 복귀
             delay(3000)
             _ui.update { it.copy(capturing = false, scanning = false) }
 
-            res?.let {
-                val matched = it.result.matchedNames.orEmpty()
-                val count = it.result.count ?: 0
+            if (res != null) {
+                val matched = res.result.matchedNames.orEmpty()
+                val count = res.result.count ?: 0
                 val next = matched.firstOrNull()
-
-                // 디버깅용 로그 추가
-                println("PRODUCT-005 Response: count=$count, matched=${matched.size}, names=$matched")
 
                 val bannerText = when {
                     count == 0 -> "상품을 찾을 수 없습니다. 카메라를 상품에 가까이 대주세요."
@@ -225,6 +363,7 @@ class ScanViewModel(
                     else -> "상품 ${matched.size}개를 찾았습니다."
                 }
 
+                // ❗ 모달은 나중에 띄우기 위해 일단 false
                 _ui.update { s ->
                     s.copy(
                         banner = ResultFormatter.Banner(
@@ -233,10 +372,22 @@ class ScanViewModel(
                         ),
                         cartGuideQueue = matched,
                         cartGuideTargetName = next,
-                        showCartGuideModal = (next != null)
+                        showCartGuideModal = false    // ✨ 바로 띄우지 않음
                     )
                 }
-            } ?: run {
+
+                sayKo(bannerText)
+
+                viewModelScope.launch {
+                    // 배너 노출 시간
+                    delay(2500)
+                    // 배너를 내리고
+                    _ui.update { it.copy(banner = null) }
+                    // 아주 살짝 숨 고르고 모달 오픈 (배너와 겹침 방지)
+                    delay(150)
+                    _ui.update { it.copy(showCartGuideModal = (next != null)) } // ✨ 여기서 모달 오픈
+                }
+            } else {
                 println("PRODUCT-005 failed or null response")
             }
         }
@@ -249,7 +400,7 @@ class ScanViewModel(
     fun onCartGuideConfirm() {
         val target = _ui.value.cartGuideTargetName ?: return
         println("=== onCartGuideConfirm called for product: $target ===")
-        speak("$target 을(를) 찾기 시작합니다. 카메라를 천천히 움직여 주세요.")
+        sayKo("$target 를 찾기 시작합니다. 카메라를 천천히 움직여 주세요.")
         _ui.update { it.copy(showCartGuideModal = false, guiding = true, guideDirection = null) }
         start006Loop(target)
     }
@@ -336,7 +487,7 @@ class ScanViewModel(
                             "가운데", "중간" -> {
                                 // 가운데인 경우 특별 처리 - 가까이 가라고 안내
                                 println("CENTER detected - speaking special message")
-                                speak("상품이 정면에 있습니다. 가까이 가주세요")
+                                sayKo("상품이 정면에 있습니다. 가까이 가주세요.")
                                 ttsCooldownUntilMs = SystemClock.elapsedRealtime() + 2000L
                                 delay(1500)
                                 null // 추가 메시지 없음
@@ -357,9 +508,11 @@ class ScanViewModel(
 
                         if (!directionMessage.isNullOrEmpty()) {
                             val message = "${directionMessage}로 이동하세요"
-                            println("!!! SPEAKING DIRECTION: '$message'")
-                            val speakResult = speak(message)
-                            println("TTS speak() returned: $speakResult")
+                            sayKo(message)
+//                            speak(normalizeTtsKo(message))
+//                            println("!!! SPEAKING DIRECTION: '$message'")
+//                            val speakResult = speak(message)
+//                            println("TTS speak() returned: $speakResult")
                             // 🕒 안내 음성 후 2초 동안 추가 호출 금지 (TTS + 이동 시간)
                             ttsCooldownUntilMs = SystemClock.elapsedRealtime() + 2000L
                         } else {
@@ -373,8 +526,8 @@ class ScanViewModel(
                         val info = res.result.info
                         println("Product found! Info: $info")
 
-                        // 상품 찾았음을 알림
-                        speak("${info?.name ?: targetName}을(를) 찾았습니다!")
+                        // 찾았음 알림
+                        sayKo("상품을 찾았습니다!")
                         delay(500)
 
                         val det = DetectResult(
@@ -398,12 +551,19 @@ class ScanViewModel(
                             allergyText
                         ).joinToString(". ")
 
-                        if (fullMessage.isNotEmpty()) {
-                            speak(fullMessage)
-                        }
+                        // 상세 안내 fullMessage
+//                        if (fullMessage.isNotEmpty()) {
+//                            speakKo(fullMessage)
+//                        }
 
                         val banner = ResultFormatter.toBanner(det)
                         _ui.update { it.copy(banner = banner, guiding = false, guideDirection = null) }
+
+                        viewModelScope.launch {
+                            delay(700)                 // 앞의 fullMessage TTS와 겹치지 않게 살짝 텀
+                            speakBannerSlow(banner.text)
+                        }
+
                         cart?.remove(CartLine(name = det.name))
                         proceedToNextCartTarget()
 
@@ -421,7 +581,7 @@ class ScanViewModel(
                             println("Found info in unknown case type, treating as RECOGNIZED")
                             // SINGLE_RECOGNIZED 로직 실행
                             val info = res.result.info
-                            speak("${info.name}을(를) 찾았습니다!")
+                            sayKo("상품을 찾았습니다!")
                             delay(500)
 
                             val det = DetectResult(
@@ -439,19 +599,25 @@ class ScanViewModel(
                             val allergyText = if (info.allergy == true) "알레르기 주의 상품입니다" else ""
 
                             val fullMessage = listOfNotNull(priceText, eventText, allergyText).joinToString(". ")
-                            if (fullMessage.isNotEmpty()) speak(fullMessage)
+//                            if (fullMessage.isNotEmpty()) speakKo(fullMessage)
 
                             val banner = ResultFormatter.toBanner(det)
                             _ui.update { it.copy(banner = banner, guiding = false, guideDirection = null) }
+
+                            viewModelScope.launch {
+                                delay(700)
+                                speakBannerSlow(banner.text)
+                            }
+
                             cart?.remove(CartLine(name = det.name))
                             proceedToNextCartTarget()
                             return@launch
                         }
 
-                        if (attempt == 9) { // 마지막 시도
-                            speak("$targetName 을(를) 찾을 수 없습니다. 다시 시도해주세요.")
-                        } else if (attempt % 3 == 2) { // 3번마다 안내
-                            speak("계속 찾고 있습니다.")
+                        if (attempt == 9) {
+                            sayKo("$targetName 를 찾을 수 없습니다. 다시 시도해주세요.")
+                        } else if (attempt % 3 == 2) {
+                            sayKo("계속 찾고 있습니다.")
                         }
                         delay(1000)
                     }
@@ -467,7 +633,7 @@ class ScanViewModel(
         viewModelScope.launch {
             val dir = DirectionBucket.values().random()
             _ui.update { it.copy(guideDirection = dir) }
-            speak("$targetName 이(가) ${dir.label}에 있습니다.")
+            sayKo("$targetName 이(가) ${dir.label}에 있습니다.")
             delay(500)
             val info = DetectResult(
                 id = targetName, name = targetName,
@@ -479,9 +645,30 @@ class ScanViewModel(
             _ui.update { it.copy(banner = ResultFormatter.toBanner(info), guiding = false, guideDirection = null) }
             cart?.remove(CartLine(name = info.name))
             proceedToNextCartTarget()
-            speak(ResultFormatter.toVoice(info).text)
+            sayKo(ResultFormatter.toVoice(info).text)
         }
     }
+
+
+    /** 배너를 조각내어 천천히 읽기: 더미/문장 합성 없이, 파트별 순차 enqueue */
+    private fun speakBannerSlow(text: String, pauseMs: Long = 350L) {
+        val chunks = text.split("|").map { it.trim() }.filter { it.isNotEmpty() }
+        if (chunks.isEmpty()) return
+
+        // 1) 첫 파트 (예: "제주감귤 200ML") → 교정만 적용
+        val first = normalizeTtsKo(chunks.first())
+        sayKo(first)
+
+        // 2) 나머지 파트는 짧게 쉬고 그대로 읽기 (예: "2200원")
+        chunks.drop(1).forEach { part ->
+            sayPause(pauseMs)                    // ❗ 더미 텍스트 대신 '진짜 대기'
+            sayKo(normalizeTtsKo(part))
+        }
+    }
+
+
+
+
 
     private fun proceedToNextCartTarget() {
         val q = _ui.value.cartGuideQueue
@@ -491,14 +678,33 @@ class ScanViewModel(
         }
         val rest = q.drop(1)
         val next = rest.firstOrNull()
-        _ui.update {
-            it.copy(
-                cartGuideQueue = rest,
-                cartGuideTargetName = next,
-                showCartGuideModal = (next != null)
-            )
+
+        // ✨ 상세정보 배너(또는 직전 배너)가 보일 시간을 주고 다음 모달 오픈
+        viewModelScope.launch {
+            // 배너가 떠 있을 법한 시간을 보장 (start006Loop에서 배너를 바로 세팅하므로 동일 2.5초 사용)
+            delay(2500)
+            // 혹시 남아있다면 내리고
+            _ui.update { it.copy(banner = null) }
+            // 다음 타겟으로 모달 오픈
+            _ui.update {
+                it.copy(
+                    cartGuideQueue = rest,
+                    cartGuideTargetName = next,
+                    showCartGuideModal = (next != null)
+                )
+            }
         }
     }
+
+
+
+
+
+
+
+
+
+
 
     /** 임시 캡처(placeholder) — 필요 시 테스트용으로 사용 */
     private fun captureFrame(@Suppress("UNUSED_PARAMETER") index: Int) {
@@ -534,6 +740,11 @@ class ScanViewModel(
         _ui.update { it.copy(cartGuideTargetName = name, showCartGuideModal = true) }
     }
 
+
+
+
+
+
     // === util ===
     private fun String.toDirectionBucketOrNull(): DirectionBucket? = when (this) {
         "왼쪽위" -> DirectionBucket.LEFT_UP
@@ -547,4 +758,7 @@ class ScanViewModel(
         "오른쪽아래" -> DirectionBucket.RIGHT_DOWN
         else -> null
     }
+
+    // 한국어 TTS 단위 교정 후 말하기 (항상 이거만 쓰면 누락 방지)
+    private fun speakKo(text: String) = speak(normalizeTtsKo(text))
 }

@@ -16,7 +16,7 @@ class TtsController(private val context: Context) : TextToSpeech.OnInitListener 
         ready = status == TextToSpeech.SUCCESS
         if (ready) {
             tts?.language = Locale.KOREAN
-            tts?.setSpeechRate(1.0f)
+            tts?.setSpeechRate(0.9f)
             tts?.setPitch(1.0f)
             // ✅ 추천: 내비게이션/가이드 용도 채널
             tts?.setAudioAttributes(

@@ -13,13 +13,18 @@ import android.util.Base64
 private val JPEG = "image/jpeg".toMediaType()
 private val TEXT = "text/plain".toMediaType()
 
+// === 공통 타깃 해상도 (신규 사양) ===
+private const val TARGET_W = 1280
+private const val TARGET_H = 720
+private const val NAV_JPEG_QUALITY = 100
+
 // --------- 공통 Bitmap → JPEG 저장 헬퍼 ---------
 
 private fun Bitmap.scaleTo(width: Int, height: Int): Bitmap =
     if (this.width == width && this.height == height) this
     else Bitmap.createScaledBitmap(this, width, height, true)
 
-/** 정확한 해상도/품질로 JPEG 저장 */
+/** 정확한 해상도/품질로 JPEG 저장 (정확히 width x height로 맞춤) */
 fun Bitmap.toJpegExact(
     tmpDir: File,
     name: String,
@@ -39,8 +44,8 @@ fun Bitmap.toJpegExact(
 fun Bitmap.toJpegUnderSize(
     tmpDir: File,
     name: String,
-    width: Int = 800,
-    height: Int = 600,
+    width: Int = TARGET_W,       // ✅ 1280
+    height: Int = TARGET_H,      // ✅ 720
     startQuality: Int = 80,
     minQuality: Int = 70,
     maxBytes: Int = 1_000_000
@@ -61,28 +66,7 @@ fun Bitmap.toJpegUnderSize(
     return file
 }
 
-// --------- NAV-001 ---------
-// part name = "image"
-fun buildNavImagePart(cacheDir: File, bmp: Bitmap): MultipartBody.Part {
-    // 권장: 최대 1280x960까지 축소, 4MB 이하가 되도록 품질 하향
-    val f = bmp.toJpegMaxUnderSize(
-        tmpDir = cacheDir,
-        name = "nav_image",
-        maxW = 1280, maxH = 960,
-        startQuality = 85, minQuality = 60,
-        maxBytes = 4_000_000
-    )
-    return MultipartBody.Part.createFormData("image", f.name, f.asRequestBody(JPEG))
-}
-
-fun Bitmap.toBase64Jpeg(width: Int, height: Int, quality: Int): String {
-    val scaled = if (this.width == width && this.height == height)
-        this else Bitmap.createScaledBitmap(this, width, height, true)
-    val bos = ByteArrayOutputStream()
-    scaled.compress(Bitmap.CompressFormat.JPEG, quality.coerceIn(1, 100), bos)
-    return Base64.encodeToString(bos.toByteArray(), Base64.NO_WRAP)
-}
-
+// (비율 유지 축소 + 용량 제한) — 필요 시 사용
 fun Bitmap.toJpegMaxUnderSize(
     tmpDir: File,
     name: String,
@@ -112,19 +96,60 @@ fun Bitmap.toJpegMaxUnderSize(
     }
 }
 
+fun Bitmap.toBase64Jpeg(width: Int, height: Int, quality: Int): String {
+    val scaled = if (this.width == width && this.height == height)
+        this else Bitmap.createScaledBitmap(this, width, height, true)
+    val bos = ByteArrayOutputStream()
+    scaled.compress(Bitmap.CompressFormat.JPEG, quality.coerceIn(1, 100), bos)
+    return Base64.encodeToString(bos.toByteArray(), Base64.NO_WRAP)
+}
+
+
+
+
+fun buildNavFilePart(cacheDir: File, bmp: Bitmap): MultipartBody.Part {
+    // ✅ 정확히 1280×720, 품질 100으로 저장
+    val f = bmp.toJpegExact(
+        tmpDir = cacheDir,
+        name = "nav_image",
+        width = TARGET_W,           // 1280
+        height = TARGET_H,          // 720
+        quality = NAV_JPEG_QUALITY  // 100
+    )
+    // 필드명은 "file" (ApiService.navGuideMultipart와 매칭)
+    return MultipartBody.Part.createFormData("file", f.name, f.asRequestBody(JPEG))
+}
+
+
+
+
+// --------- NAV-001 ---------
+// part name = "image"
+// ✅ 요청에 맞춰 정확히 1280x720, 4MB 이하로 보냄
+fun buildNavImagePart(cacheDir: File, bmp: Bitmap): MultipartBody.Part {
+    val f = bmp.toJpegUnderSize(
+        tmpDir = cacheDir,
+        name = "nav_image",
+        width = TARGET_W, height = TARGET_H,
+        startQuality = 85, minQuality = 60,
+        maxBytes = 4_000_000
+    )
+    return MultipartBody.Part.createFormData("image", f.name, f.asRequestBody(JPEG))
+}
+
 // --------- PRODUCT-005 ---------
-// 요청 사양: "file" 필드명 사용 (Swagger 기준)
+// 요청 사양: "file" 필드명 사용
+// ✅ 1280x720로 상향(기존 800x600 → 1280x720), 1MB 제한 유지
 fun buildShelfImagePart(cacheDir: File, bmp: Bitmap): MultipartBody.Part {
     val f = bmp.toJpegUnderSize(
         tmpDir = cacheDir,
         name = "shelf",
-        width = 800,
-        height = 600,
+        width = TARGET_W,
+        height = TARGET_H,
         startQuality = 80,
-        minQuality = 75,
+        minQuality = 70,
         maxBytes = 1_000_000
     )
-    // Swagger에서 사용하는 필드명 "file"로 변경
     return MultipartBody.Part.createFormData("file", f.name, f.asRequestBody(JPEG))
 }
 
@@ -136,9 +161,10 @@ fun buildShelfImageParts(cacheDir: File, bitmaps: List<Bitmap>): List<MultipartB
 }
 
 // --------- PRODUCT-006 ---------
-// 이미지: "current_frame" 1장 (JPEG 800x600, Q=80)
+// 이미지: "current_frame" 1장
+// ✅ 정확히 1280x720, Q=80로 고정
 fun buildCurrentFramePart(cacheDir: File, bitmap: Bitmap): MultipartBody.Part {
-    val f = bitmap.toJpegExact(cacheDir, "current_frame", 800, 600, 80)
+    val f = bitmap.toJpegExact(cacheDir, "current_frame", TARGET_W, TARGET_H, 80)
     return MultipartBody.Part.createFormData("current_frame", f.name, f.asRequestBody(JPEG))
 }
 

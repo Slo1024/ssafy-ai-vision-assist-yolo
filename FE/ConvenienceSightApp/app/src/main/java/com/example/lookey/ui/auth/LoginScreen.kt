@@ -32,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.unit.sp
 
 
 @Composable
@@ -105,15 +106,19 @@ fun LoginScreen(
         ) {
             Text(
                 text = "저시력자를 위한\n편의점 쇼핑 도우미",
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontSize = 36.sp,   // 기존보다 업 (필요에 따라 26~30.sp로 조절)
+                    lineHeight = 40.sp, // 줄 간격도 함께 키워 가독성 ↑
+                     fontWeight = FontWeight.Bold // 굵게 하고 싶으면
+                ),
                 color = MaterialTheme.colorScheme.onBackground
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(40.dp))
 
             Image(
                 painter = painterResource(logoResId),
                 contentDescription = "LooKey 로고",
-                modifier = Modifier.size(120.dp)
+                modifier = Modifier.size(180.dp)
             )
 
             Spacer(Modifier.height(12.dp))
@@ -126,20 +131,20 @@ fun LoginScreen(
             )
         }
 
-        if (showSkip) {
-            TextButton(
-                onClick = {
-                    tts.speak("로그인을 건너뛰고 홈으로 이동합니다.")
-                    onSignedIn()
-                },
-                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 76.dp)
-            ) { Text("건너뛰기") }
-        }
+//        if (showSkip) {
+//            TextButton(
+//                onClick = {
+//                    tts.speak("로그인을 건너뛰고 홈으로 이동합니다.")
+//                    onSignedIn()
+//                },
+//                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 76.dp)
+//            ) { Text("건너뛰기") }
+//        }
 
         GoogleSignInButton(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 20.dp),
+                .padding(bottom = 24.dp),
             text = "구글로 시작하기",
             iconResId = googleIconResId,
             onClick = { signInLauncher.launch(googleClient.signInIntent) }
