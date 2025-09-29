@@ -157,17 +157,17 @@
 - 상품 분류 및 인식
 - 실시간 추론 결과 반환
 
-*자세한 API 명세는 [API.md](./S13P21E101/ouput/API.md)를 참조하세요.*
+*자세한 API 명세는 [API.md](./ouput/API.md)를 참조하세요.*
 
 ---
 
 ## 📋 산출물
 
-- 📐 **[ERD 다이어그램](./S13P21E101/ouput/)** - 데이터베이스 설계도
-- 🎨 **[Figma 디자인](./S13P21E101/ouput/)** - UI/UX 디자인 시안
-- 📄 **[API 명세서](./S13P21E101/ouput/API.md)** - 상세한 API 문서
-- 📖 **[포팅 매뉴얼](./S13P21E101/exec/PORTING_MANUAL.md)** - 배포 및 설치 가이드
-- 🗃️ **[DB 덤프 파일](./S13P21E101/exec/)** - 데이터베이스 초기 데이터
+- 📐 **[ERD 다이어그램](./ouput/ERD.png)** - 데이터베이스 설계도
+- 🎨 **[Figma 디자인](./ouput/figma.png)** - UI/UX 디자인 시안
+- 📄 **[API 명세서](./ouput/API.md)** - 상세한 API 문서
+- 📖 **[포팅 매뉴얼](./exec/PORTING_MANUAL.md)** - 배포 및 설치 가이드
+- 🗃️ **[DB 덤프 파일](./exec/)** - 데이터베이스 초기 데이터
 
 ---
 
