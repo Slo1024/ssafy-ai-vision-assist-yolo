@@ -192,3 +192,5 @@ FE/**/.yarn-integrity
 **/*.pfx
 **/keystore
 **/truststoreBE/lookey/src/main/resources/application.properties
+BE/lookey/ssafy-finance-*.json
+BE/lookey/src/main/resources/application.properties
